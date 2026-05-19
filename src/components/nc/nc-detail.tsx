@@ -3,13 +3,19 @@
 import Link from 'next/link'
 import {
   ArrowLeft, Edit3, FileImage, FileText, FileCode, FileQuestion,
-  Share2, Check, CheckCircle2, Clock, MessageSquare, UserCircle,
+  Check, CheckCircle2, Clock, UserCircle,
 } from 'lucide-react'
 import type { NCComRelacoes } from '@/lib/queries/nao-conformidades'
+import type { ComentarioRow } from '@/lib/queries/nc-comentarios-types'
+import { NCComentarios } from '@/components/nc/nc-comentarios'
+import { NCShareButton } from '@/components/nc/nc-share-button'
 import { cn } from '@/lib/utils'
 
 interface NCDetailProps {
-  nc: NCComRelacoes
+  nc:                NCComRelacoes
+  comentarios:       ComentarioRow[]
+  usuarioAtualId:    string
+  usuarioAtualNome:  string
 }
 
 const SEVERIDADE_LABEL: Record<string, { label: string; cls: string }> = {
@@ -129,7 +135,9 @@ function parseClausula(raw: string | null): { numero: string; titulo: string } {
   return { numero: m[1].trim(), titulo: (m[2] ?? '').trim() }
 }
 
-export function NCDetail({ nc }: Readonly<NCDetailProps>) {
+export function NCDetail({
+  nc, comentarios, usuarioAtualId, usuarioAtualNome,
+}: Readonly<NCDetailProps>) {
   const sev = nc.severidade ? SEVERIDADE_LABEL[nc.severidade] : null
   const detectorNome = nc.detector?.nome ?? 'Sistema'
   const responsavelNome = nc.responsavel?.nome ?? null
@@ -282,17 +290,13 @@ export function NCDetail({ nc }: Readonly<NCDetailProps>) {
             </div>
           </div>
 
-          {/* Comentários — placeholder (sistema ainda não modelado) */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
-            <h2 className="text-sm font-bold text-slate-900 mb-4">Discussão</h2>
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <MessageSquare className="h-10 w-10 text-slate-200 mb-3" />
-              <p className="text-sm font-semibold text-slate-500">Discussão indisponível</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                O sistema de comentários colaborativos será disponibilizado em uma próxima versão.
-              </p>
-            </div>
-          </div>
+          {/* Comentários — sistema real */}
+          <NCComentarios
+            ncId={nc.id}
+            comentarios={comentarios}
+            usuarioAtualId={usuarioAtualId}
+            usuarioAtualNome={usuarioAtualNome}
+          />
         </section>
 
         {/* ── Right sidebar ── */}
@@ -396,16 +400,16 @@ export function NCDetail({ nc }: Readonly<NCDetailProps>) {
             </div>
           )}
 
-          {/* Floating share btn */}
-          <button
-            type="button"
-            className="fixed bottom-8 right-8 w-14 h-14 bg-blue-700 hover:bg-blue-800 text-white rounded-full shadow-lg flex items-center justify-center transition-all active:scale-95 z-30"
-            aria-label="Compartilhar NC"
-          >
-            <Share2 className="h-5 w-5" />
-          </button>
         </aside>
       </div>
+
+      {/* Floating share button — WhatsApp, e-mail, copiar link */}
+      <NCShareButton
+        ncCodigo={nc.codigo}
+        ncTitulo={nc.titulo}
+        ncSeveridade={sev?.label}
+        ncStatus={nc.status}
+      />
     </div>
   )
 }
