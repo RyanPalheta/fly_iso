@@ -37,11 +37,14 @@ export default async function VerificacaoPage({ params }: Props) {
       acoes={acoes
         .filter((a) => a.status === 'concluida')
         .map((a) => ({
-          id:           a.id,
-          descricao:    a.descricao,
-          prazo:        a.prazo,
-          status:       a.status,
-          concluida_em: a.concluida_em,
+          id:             a.id,
+          descricao:      a.descricao,
+          prazo:          a.prazo,
+          status:         a.status,
+          concluida_em:   a.concluida_em,
+          observacao:     a.observacao,
+          evidencia_urls: a.evidencia_urls,
+          responsavel:    a.responsavel ? { nome: a.responsavel.nome } : null,
         }))}
       usuarioAtualId={user.id}
     />

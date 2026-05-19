@@ -5,18 +5,22 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, CheckCircle2, XCircle, ShieldCheck, AlertTriangle,
-  FileText, X, Loader2, Check, Info,
+  FileText, FileImage, FileCode, FileQuestion, X, Loader2, Check, Info,
+  Paperclip, MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { registrarVerificacao } from '@/lib/actions/capa'
 import { FileUpload } from '@/components/shared/file-upload'
 
 interface AcaoSummary {
-  id:           string
-  descricao:    string
-  prazo:        string | null
-  status:       string
-  concluida_em: string | null
+  id:             string
+  descricao:      string
+  prazo:          string | null
+  status:         string
+  concluida_em:   string | null
+  observacao:     string | null
+  evidencia_urls: unknown
+  responsavel:    { nome: string } | null
 }
 
 interface CapaSummary {
@@ -38,6 +42,32 @@ interface EvidenciaFile { url: string; nome: string }
 function fmt(iso: string | null): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function parseEvidencias(raw: unknown): EvidenciaFile[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((item) => {
+    if (typeof item === 'string') {
+      return { url: item, nome: item.split('/').pop() ?? 'arquivo' }
+    }
+    if (item && typeof item === 'object' && 'url' in item) {
+      const o = item as { url?: unknown; nome?: unknown }
+      return {
+        url:  typeof o.url  === 'string' ? o.url  : '',
+        nome: typeof o.nome === 'string' ? o.nome : 'arquivo',
+      }
+    }
+    return { url: '', nome: '' }
+  }).filter((e) => e.url)
+}
+
+function fileIcon(nome: string) {
+  const lower = nome.toLowerCase()
+  if (/\.(png|jpe?g|webp|gif|svg)$/.test(lower)) return { Icon: FileImage, cls: 'text-blue-600 bg-blue-50' }
+  if (lower.endsWith('.pdf'))                    return { Icon: FileText, cls: 'text-red-600 bg-red-50' }
+  if (/\.(xlsx?|csv)$/.test(lower))              return { Icon: FileCode, cls: 'text-emerald-600 bg-emerald-50' }
+  if (/\.(docx?|odt)$/.test(lower))              return { Icon: FileText, cls: 'text-slate-600 bg-slate-100' }
+  return { Icon: FileQuestion, cls: 'text-slate-500 bg-slate-100' }
 }
 
 export function VerificacaoForm({ capa, acoes, usuarioAtualId }: Readonly<VerificacaoFormProps>) {
@@ -133,6 +163,111 @@ export function VerificacaoForm({ capa, acoes, usuarioAtualId }: Readonly<Verifi
               <p className="text-sm text-red-700 font-medium">{error}</p>
             </div>
           )}
+
+          {/* Resumo das Ações Implementadas */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                Ações Implementadas ({acoes.length})
+              </h2>
+              <span className="text-[10px] text-slate-400 font-medium">
+                Revise as evidências antes de validar a eficácia
+              </span>
+            </div>
+
+            {acoes.length === 0 ? (
+              <p className="text-xs text-slate-400 italic py-4 text-center">
+                Nenhuma ação concluída para revisar.
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {acoes.map((acao) => {
+                  const evidencias = parseEvidencias(acao.evidencia_urls)
+                  const hasContext = evidencias.length > 0 || !!acao.observacao?.trim()
+
+                  return (
+                    <li
+                      key={acao.id}
+                      className="border border-slate-100 rounded-xl p-4 bg-slate-50/30"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          {/* Descrição */}
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 leading-snug">
+                              {acao.descricao}
+                            </p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                              {acao.responsavel?.nome ?? '—'} · Concluída em {fmt(acao.concluida_em)}
+                            </p>
+                          </div>
+
+                          {/* Observação */}
+                          {acao.observacao?.trim() && (
+                            <div className="bg-white rounded-lg p-2.5 ring-1 ring-slate-100">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <MessageSquare className="h-3 w-3 text-slate-400" />
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                  Observação
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
+                                {acao.observacao}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Evidências */}
+                          {evidencias.length > 0 && (
+                            <div className="bg-white rounded-lg p-2.5 ring-1 ring-slate-100">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <Paperclip className="h-3 w-3 text-slate-400" />
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                  Evidências ({evidencias.length})
+                                </span>
+                              </div>
+                              <ul className="flex flex-wrap gap-1.5">
+                                {evidencias.map((ev, i) => {
+                                  const { Icon, cls } = fileIcon(ev.nome)
+                                  return (
+                                    <li key={ev.url + i}>
+                                      <a
+                                        href={ev.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={cn(
+                                          'flex items-center gap-1.5 rounded-md px-2 py-1 max-w-[200px] hover:opacity-80 transition-opacity',
+                                          cls
+                                        )}
+                                        title={ev.nome}
+                                      >
+                                        <Icon className="h-3 w-3 shrink-0" />
+                                        <span className="text-[10px] font-semibold truncate">{ev.nome}</span>
+                                      </a>
+                                    </li>
+                                  )
+                                })}
+                              </ul>
+                            </div>
+                          )}
+
+                          {!hasContext && (
+                            <p className="text-[10px] italic text-slate-400">
+                              Sem evidências ou observações registradas para esta ação.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
 
           {/* 01. Resultado */}
           <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
@@ -302,25 +437,6 @@ export function VerificacaoForm({ capa, acoes, usuarioAtualId }: Readonly<Verifi
               <p className="text-xs text-slate-500 mb-0.5">Verificador</p>
               <p className="text-sm font-bold text-slate-900">{capa.responsavel?.nome ?? '—'}</p>
             </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-              Ações Concluídas ({acoes.length})
-            </h3>
-            <ul className="space-y-2 max-h-64 overflow-y-auto">
-              {acoes.map((a) => (
-                <li key={a.id} className="flex items-start gap-2 text-xs">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="text-slate-700 font-medium line-clamp-2">{a.descricao}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Concluída em {fmt(a.concluida_em)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
           </div>
 
           <div className="bg-blue-50 rounded-2xl p-5 ring-1 ring-blue-200/40">
