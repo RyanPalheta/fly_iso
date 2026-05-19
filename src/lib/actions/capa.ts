@@ -100,7 +100,7 @@ async function recalcularStatus(capaId: string): Promise<void> {
 
   const [{ data: capa }, { data: acoes }, { data: verificacoes }] = await Promise.all([
     sb.from('capas')
-      .select('status, causa_raiz_metodo, causa_raiz_dados')
+      .select('codigo, status, causa_raiz_metodo, causa_raiz_dados, responsavel_id, nc_id')
       .eq('id', capaId)
       .single(),
     sb.from('acoes')
@@ -113,9 +113,14 @@ async function recalcularStatus(capaId: string): Promise<void> {
 
   if (!capa) return
 
-  // Se já está encerrada manualmente, não altera
-  // (encerrada_em != null indica encerramento explícito)
-  const capaTyped = capa as { status: CapaStatus; causa_raiz_metodo: string | null; causa_raiz_dados: unknown }
+  const capaTyped = capa as {
+    codigo: string
+    status: CapaStatus
+    causa_raiz_metodo: string | null
+    causa_raiz_dados: unknown
+    responsavel_id: string | null
+    nc_id: string | null
+  }
 
   const novoStatus = computeCapaStatus({
     causaRaizMetodo: capaTyped.causa_raiz_metodo,
@@ -124,14 +129,49 @@ async function recalcularStatus(capaId: string): Promise<void> {
     verificacoes:    (verificacoes ?? []) as Array<{ eficaz: boolean | null }>,
   })
 
-  if (novoStatus !== capaTyped.status) {
-    await sb
-      .from('capas')
-      .update({
-        status: novoStatus,
-        ...(novoStatus === 'encerrada' ? { encerrada_em: new Date().toISOString() } : {}),
+  if (novoStatus === capaTyped.status) return
+
+  await sb
+    .from('capas')
+    .update({
+      status: novoStatus,
+      ...(novoStatus === 'encerrada' ? { encerrada_em: new Date().toISOString() } : {}),
+    })
+    .eq('id', capaId)
+
+  // ── Trigger de notificações por transição de status ──
+
+  // Mudou para Verificação: notificar responsável da CAPA
+  if (novoStatus === 'verificacao' && capaTyped.responsavel_id) {
+    await sb.from('notificacoes').insert({
+      usuario_id:  capaTyped.responsavel_id,
+      titulo:      `${capaTyped.codigo} pronto para verificação de eficácia`,
+      mensagem:    'Todas as ações foram concluídas. Acesse a CAPA para registrar a verificação de eficácia.',
+      tipo:        'alerta',
+      entidade:    'capas',
+      entidade_id: capaId,
+    })
+  }
+
+  // Mudou para Encerrada: notificar responsável de NC (se houver)
+  if (novoStatus === 'encerrada' && capaTyped.nc_id) {
+    const { data: nc } = await sb
+      .from('nao_conformidades')
+      .select('responsavel_id, codigo')
+      .eq('id', capaTyped.nc_id)
+      .single()
+
+    const ncTyped = nc as { responsavel_id: string | null; codigo: string } | null
+    if (ncTyped?.responsavel_id) {
+      await sb.from('notificacoes').insert({
+        usuario_id:  ncTyped.responsavel_id,
+        titulo:      `${ncTyped.codigo} encerrada com sucesso`,
+        mensagem:    `A CAPA ${capaTyped.codigo} foi encerrada após verificação de eficácia. A NC está resolvida.`,
+        tipo:        'sucesso',
+        entidade:    'nao_conformidades',
+        entidade_id: capaTyped.nc_id,
       })
-      .eq('id', capaId)
+    }
   }
 }
 
@@ -274,6 +314,89 @@ export async function updateAcaoStatus(
 
   await recalcularStatus(capaId)
   revalidatePath(`/capa/${capaId}`)
+  return { ok: true }
+}
+
+export interface RegistrarVerificacaoInput {
+  capaId:       string
+  eficaz:       boolean
+  observacoes:  string
+  evidenciaUrls?: Array<{ url: string; nome: string }>
+}
+
+/**
+ * Registra a verificação de eficácia da CAPA.
+ *  - Só o responsável (ou Admin/Qualidade) pode verificar.
+ *  - Se eficaz=true → CAPA é encerrada automaticamente via recalcularStatus.
+ *  - Se eficaz=false → CAPA volta para 'em_execucao' e responsável recebe
+ *    notificação de retrabalho.
+ */
+export async function registrarVerificacao(input: RegistrarVerificacaoInput): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  if (!input.observacoes.trim()) {
+    return { ok: false, error: 'Observações são obrigatórias para fins de auditoria.' }
+  }
+
+  const sb = await sbService()
+
+  // Valida que o usuário é o responsável da CAPA
+  const { data: capa } = await sb
+    .from('capas')
+    .select('codigo, responsavel_id, status')
+    .eq('id', input.capaId)
+    .single()
+
+  const capaTyped = capa as { codigo: string; responsavel_id: string | null; status: CapaStatus } | null
+  if (!capaTyped) return { ok: false, error: 'CAPA não encontrada.' }
+
+  // (Admin/Qualidade poderia ser permitido aqui também — por ora só o responsável)
+  if (capaTyped.responsavel_id !== user.id) {
+    return { ok: false, error: 'Apenas o responsável pode registrar a verificação.' }
+  }
+
+  if (capaTyped.status !== 'verificacao' && capaTyped.status !== 'reaberta') {
+    return { ok: false, error: 'CAPA não está em fase de verificação.' }
+  }
+
+  // Insere registro de verificação
+  const { error } = await sb
+    .from('verificacoes_eficacia')
+    .insert({
+      capa_id:          input.capaId,
+      verificado_por:   user.id,
+      data_verificacao: new Date().toISOString().split('T')[0],
+      eficaz:           input.eficaz,
+      observacoes:      input.observacoes.trim(),
+      evidencia_urls:   input.evidenciaUrls ?? [],
+    })
+
+  if (error) return { ok: false, error: error.message }
+
+  // Se NÃO foi eficaz: reabre a CAPA e notifica responsável
+  if (!input.eficaz) {
+    await sb
+      .from('capas')
+      .update({ status: 'em_execucao' })
+      .eq('id', input.capaId)
+
+    await sb.from('notificacoes').insert({
+      usuario_id:  user.id,
+      titulo:      `${capaTyped.codigo} — verificação reprovada`,
+      mensagem:    'A ação implementada não eliminou a causa raiz. Reveja o plano e adicione/refine ações.',
+      tipo:        'erro',
+      entidade:    'capas',
+      entidade_id: input.capaId,
+    })
+  } else {
+    // Eficaz → recalcular vai encerrar a CAPA automaticamente
+    await recalcularStatus(input.capaId)
+  }
+
+  revalidatePath(`/capa/${input.capaId}`)
+  revalidatePath('/capa')
   return { ok: true }
 }
 

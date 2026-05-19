@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, CheckCircle2, Clock, Circle, Loader2, XCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createAcao, updateAcaoStatus } from '@/lib/actions/capa'
 import { effectiveAcaoStatus } from '@/lib/utils/acoes-utils'
 import type { AcaoComResponsavel } from '@/lib/queries/capas'
 import type { UsuarioBasico } from '@/lib/queries/areas'
+
+type AcaoStatusReal = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada'
 
 interface PlanoAcaoTableProps {
   capaId: string
@@ -28,12 +31,18 @@ function fmt(iso: string | null): string {
 }
 
 export function PlanoAcaoTable({ capaId, acoes, usuarios }: Readonly<PlanoAcaoTableProps>) {
+  const router = useRouter()
   const [showForm, setShowForm]   = useState(false)
   const [descricao, setDescricao] = useState('')
   const [respId, setRespId]       = useState(usuarios[0]?.id ?? '')
   const [prazo, setPrazo]         = useState('')
   const [error, setError]         = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  // Estado local com optimistic updates. Sincroniza com props quando o
+  // servidor revalida, mas atualiza visualmente IMEDIATAMENTE no clique.
+  const [localAcoes, setLocalAcoes] = useState<AcaoComResponsavel[]>(acoes)
+  useEffect(() => { setLocalAcoes(acoes) }, [acoes])
 
   const handleAdd = () => {
     if (!descricao.trim() || !respId || !prazo) { setError('Preencha todos os campos.'); return }
@@ -46,29 +55,46 @@ export function PlanoAcaoTable({ capaId, acoes, usuarios }: Readonly<PlanoAcaoTa
   }
 
   const handleStatusToggle = (acao: AcaoComResponsavel) => {
-    const next = acao.status === 'pendente' ? 'em_andamento'
+    const next: AcaoStatusReal = acao.status === 'pendente' ? 'em_andamento'
       : acao.status === 'em_andamento' ? 'concluida'
       : 'pendente'
+
+    // 1) Optimistic update — UI muda na hora
+    setLocalAcoes((prev) =>
+      prev.map((a) => a.id === acao.id ? { ...a, status: next } : a)
+    )
+
+    // 2) Server confirma em background; em caso de erro, revalida (router.refresh)
     startTransition(async () => {
-      await updateAcaoStatus(acao.id, capaId, next as 'pendente' | 'em_andamento' | 'concluida' | 'cancelada')
+      const result = await updateAcaoStatus(acao.id, capaId, next)
+      if (!result.ok) {
+        // Reverte e mostra erro
+        setLocalAcoes((prev) =>
+          prev.map((a) => a.id === acao.id ? { ...a, status: acao.status } : a)
+        )
+        setError(result.error ?? 'Erro ao atualizar.')
+      } else {
+        // Sucesso → recarrega para sincronizar status do CAPA (que pode ter mudado)
+        router.refresh()
+      }
     })
   }
 
-  const concluidas = acoes.filter((a) => a.status === 'concluida').length
+  const concluidas = localAcoes.filter((a) => a.status === 'concluida').length
 
   return (
     <div className="space-y-4">
       {/* Progress bar */}
-      {acoes.length > 0 && (
+      {localAcoes.length > 0 && (
         <div>
           <div className="flex justify-between text-xs font-semibold text-slate-500 mb-1.5">
             <span>Progresso do Plano</span>
-            <span>{concluidas}/{acoes.length} concluídas</span>
+            <span>{concluidas}/{localAcoes.length} concluídas</span>
           </div>
           <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-emerald-500 rounded-full transition-all"
-              style={{ width: `${acoes.length ? (concluidas / acoes.length) * 100 : 0}%` }}
+              style={{ width: `${localAcoes.length ? (concluidas / localAcoes.length) * 100 : 0}%` }}
             />
           </div>
         </div>
@@ -76,9 +102,9 @@ export function PlanoAcaoTable({ capaId, acoes, usuarios }: Readonly<PlanoAcaoTa
 
       {/* Ações */}
       <div className="space-y-2">
-        {acoes.map((acao) => {
+        {localAcoes.map((acao) => {
           // Status efetivo = persistido OU 'atrasada' (calculado por prazo)
-          const statusEf = effectiveAcaoStatus(acao.status as 'pendente' | 'em_andamento' | 'concluida' | 'cancelada', acao.prazo)
+          const statusEf = effectiveAcaoStatus(acao.status as AcaoStatusReal, acao.prazo)
           const sm = STATUS_ICON[statusEf as keyof typeof STATUS_ICON] ?? STATUS_ICON.pendente
           const StatusIcon = sm.icon
           const isAtrasada = statusEf === 'atrasada'

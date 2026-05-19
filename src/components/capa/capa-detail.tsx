@@ -156,7 +156,17 @@ export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>)
               })}
             </div>
 
-            {currentOrder < STATUS_FLOW.length - 1 && (
+            {/* CTA específico para fase de Verificação */}
+            {capa.status === 'verificacao' && (
+              <Link
+                href={`/capa/${capa.id}/verificacao`}
+                className="block w-full mt-5 text-center bg-gradient-to-br from-violet-600 to-blue-700 hover:opacity-90 text-white px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm transition-opacity"
+              >
+                Iniciar Verificação de Eficácia →
+              </Link>
+            )}
+
+            {currentOrder < STATUS_FLOW.length - 1 && capa.status !== 'verificacao' && (
               <div className="mt-5 flex items-start gap-2 text-[11px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2.5 ring-1 ring-slate-100">
                 <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
                 <p>
