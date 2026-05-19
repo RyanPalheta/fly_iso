@@ -400,6 +400,141 @@ export async function registrarVerificacao(input: RegistrarVerificacaoInput): Pr
   return { ok: true }
 }
 
+/**
+ * Adiciona evidência (arquivo já enviado ao Storage) a uma ação do plano.
+ */
+export async function addEvidenciaAcao(input: {
+  acaoId: string
+  capaId: string
+  url:    string
+  nome:   string
+}): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  const sb = await sbService()
+
+  // Busca evidências atuais (JSONB array)
+  const { data: acao } = await sb
+    .from('acoes')
+    .select('evidencia_urls')
+    .eq('id', input.acaoId)
+    .single()
+
+  const atuais = ((acao as { evidencia_urls?: unknown[] } | null)?.evidencia_urls ?? []) as Array<{ url: string; nome: string }>
+  const novas = [...atuais, { url: input.url, nome: input.nome }]
+
+  const { error } = await sb
+    .from('acoes')
+    .update({ evidencia_urls: novas })
+    .eq('id', input.acaoId)
+
+  if (error) return { ok: false, error: error.message }
+  revalidatePath(`/capa/${input.capaId}`)
+  return { ok: true }
+}
+
+/** Remove uma evidência específica de uma ação. */
+export async function removeEvidenciaAcao(input: {
+  acaoId: string
+  capaId: string
+  index:  number
+}): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  const sb = await sbService()
+
+  const { data: acao } = await sb
+    .from('acoes')
+    .select('evidencia_urls')
+    .eq('id', input.acaoId)
+    .single()
+
+  const atuais = ((acao as { evidencia_urls?: unknown[] } | null)?.evidencia_urls ?? []) as Array<{ url: string; nome: string }>
+  const novas = atuais.filter((_, i) => i !== input.index)
+
+  const { error } = await sb
+    .from('acoes')
+    .update({ evidencia_urls: novas })
+    .eq('id', input.acaoId)
+
+  if (error) return { ok: false, error: error.message }
+  revalidatePath(`/capa/${input.capaId}`)
+  return { ok: true }
+}
+
+/** Atualiza a observação textual de uma ação. */
+export async function updateAcaoObservacao(input: {
+  acaoId:     string
+  capaId:     string
+  observacao: string
+}): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  const sb = await sbService()
+  const { error } = await sb
+    .from('acoes')
+    .update({ observacao: input.observacao.trim() || null })
+    .eq('id', input.acaoId)
+
+  if (error) return { ok: false, error: error.message }
+  revalidatePath(`/capa/${input.capaId}`)
+  return { ok: true }
+}
+
+/**
+ * Reabre uma CAPA encerrada.
+ * Status volta para 'reaberta' e encerrada_em é zerado.
+ * (Admin/Qualidade ou responsável podem reabrir.)
+ */
+export async function reabrirCapa(capaId: string): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  const sb = await sbService()
+
+  const { data: capa } = await sb
+    .from('capas')
+    .select('codigo, status, responsavel_id')
+    .eq('id', capaId)
+    .single()
+
+  const capaTyped = capa as { codigo: string; status: CapaStatus; responsavel_id: string | null } | null
+  if (!capaTyped) return { ok: false, error: 'CAPA não encontrada.' }
+  if (capaTyped.status !== 'encerrada') {
+    return { ok: false, error: 'Apenas CAPAs encerradas podem ser reabertas.' }
+  }
+
+  const { error } = await sb
+    .from('capas')
+    .update({ status: 'reaberta', encerrada_em: null })
+    .eq('id', capaId)
+
+  if (error) return { ok: false, error: error.message }
+
+  // Notifica responsável
+  if (capaTyped.responsavel_id) {
+    await sb.from('notificacoes').insert({
+      usuario_id:  capaTyped.responsavel_id,
+      titulo:      `${capaTyped.codigo} foi reaberta`,
+      mensagem:    'A CAPA foi reaberta para revisão. Acesse para identificar a próxima ação.',
+      tipo:        'alerta',
+      entidade:    'capas',
+      entidade_id: capaId,
+    })
+  }
+
+  revalidatePath('/capa')
+  revalidatePath(`/capa/${capaId}`)
+  return { ok: true }
+}
+
 export async function updateCapaStatus(capaId: string, status: CapaStatus): Promise<ActionResult> {
   const userSb = await createClient()
   const { data: { user } } = await userSb.auth.getUser()

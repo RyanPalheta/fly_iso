@@ -14,6 +14,7 @@ interface CausaRaizSelectorProps {
   capaId:    string
   metodo:    string | null
   dados:     unknown
+  readOnly?: boolean
 }
 
 const METODOS: Array<{
@@ -91,13 +92,14 @@ function hasData(metodo: Metodo, dados: unknown): boolean {
   return false
 }
 
-export function CausaRaizSelector({ capaId, metodo, dados }: Readonly<CausaRaizSelectorProps>) {
+export function CausaRaizSelector({ capaId, metodo, dados, readOnly }: Readonly<CausaRaizSelectorProps>) {
   const currentMetodo = (metodo as Metodo | null) ?? '5_porques'
   const [selected, setSelected] = useState<Metodo>(currentMetodo)
   const [showWarning, setShowWarning] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const handleSelect = (novo: Metodo) => {
+    if (readOnly) return
     if (novo === selected) return
 
     // Se há dados no método atual, avisar antes de trocar
@@ -151,13 +153,14 @@ export function CausaRaizSelector({ capaId, metodo, dados }: Readonly<CausaRaizS
               <button
                 key={m.value}
                 type="button"
-                disabled={isPending}
+                disabled={isPending || readOnly}
                 onClick={() => handleSelect(m.value)}
                 className={cn(
                   'text-left p-4 rounded-xl ring-1 transition-all',
                   isActive
                     ? 'bg-white ring-blue-300 ring-2 shadow-sm'
-                    : 'bg-slate-50 ring-slate-200 hover:bg-white hover:ring-slate-300'
+                    : 'bg-slate-50 ring-slate-200 hover:bg-white hover:ring-slate-300',
+                  readOnly && 'cursor-not-allowed opacity-60'
                 )}
               >
                 <div className="flex items-start justify-between mb-2">
@@ -218,7 +221,11 @@ export function CausaRaizSelector({ capaId, metodo, dados }: Readonly<CausaRaizS
       )}
 
       {/* Editor ativo */}
-      {!showWarning && renderEditor()}
+      {!showWarning && (
+        <div className={cn(readOnly && 'pointer-events-none opacity-70')}>
+          {renderEditor()}
+        </div>
+      )}
     </div>
   )
 }

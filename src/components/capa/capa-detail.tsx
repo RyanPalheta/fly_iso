@@ -1,11 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, Edit3, ExternalLink, Info } from 'lucide-react'
+import { useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import {
+  ArrowLeft, Edit3, ExternalLink, Info, Lock, RotateCcw, Loader2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { CausaRaizSelector } from '@/components/capa/causa-raiz-selector'
 import { PlanoAcaoTable } from '@/components/capa/plano-acao-table'
+import { reabrirCapa } from '@/lib/actions/capa'
 import type { CapaComRelacoes, AcaoComResponsavel } from '@/lib/queries/capas'
 import type { UsuarioBasico } from '@/lib/queries/areas'
 import type { CapaStatus } from '@/types/database'
@@ -36,7 +41,19 @@ const STATUS_ORDER: Record<CapaStatus, number> = {
 }
 
 export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>) {
+  const router = useRouter()
   const currentOrder = STATUS_ORDER[capa.status] ?? 0
+  const isEncerrada = capa.status === 'encerrada'
+  const [isReopening, startReopen] = useTransition()
+
+  const handleReabrir = () => {
+    if (!confirm('Tem certeza que deseja reabrir esta CAPA? O status voltará para "Reaberta".')) return
+    startReopen(async () => {
+      const result = await reabrirCapa(capa.id)
+      if (!result.ok) { alert(result.error ?? 'Erro ao reabrir.'); return }
+      router.refresh()
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -65,10 +82,17 @@ export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>)
                 </span>
                 <StatusBadge status={capa.status} />
               </div>
-              <button className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
-                <Edit3 className="h-3.5 w-3.5" />
-                Editar
-              </button>
+              {!isEncerrada && (
+                <button
+                  type="button"
+                  disabled
+                  title="Edição em breve"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 cursor-not-allowed px-3 py-1.5 rounded-lg"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Editar
+                </button>
+              )}
             </div>
 
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-1">{capa.codigo}</h1>
@@ -89,6 +113,25 @@ export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>)
                 NC Vinculada: {capa.nc.codigo} — {capa.nc.titulo}
               </Link>
             )}
+
+            {/* Banner de encerramento */}
+            {isEncerrada && (
+              <div className="mt-5 flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                <Lock className="h-4 w-4 text-emerald-700 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-emerald-900">CAPA encerrada com sucesso</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">
+                    A verificação de eficácia foi aprovada e este registro está em modo somente leitura.
+                    Para alterar, reabra a CAPA usando o botão na barra lateral.
+                  </p>
+                  {capa.encerrada_em && (
+                    <p className="text-[11px] text-emerald-600 mt-1.5 font-medium">
+                      Encerrada em {fmt(capa.encerrada_em)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Causa Raiz — método selecionável (5 Porquês / Ishikawa / Texto Livre) */}
@@ -105,6 +148,7 @@ export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>)
               capaId={capa.id}
               metodo={capa.causa_raiz_metodo}
               dados={capa.causa_raiz_dados}
+              readOnly={isEncerrada}
             />
           </div>
 
@@ -119,7 +163,7 @@ export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>)
                 {acoes.filter(a => a.status === 'concluida').length}/{acoes.length} concluídas
               </span>
             </div>
-            <PlanoAcaoTable capaId={capa.id} acoes={acoes} usuarios={usuarios} />
+            <PlanoAcaoTable capaId={capa.id} acoes={acoes} usuarios={usuarios} readOnly={isEncerrada} />
           </div>
         </section>
 
@@ -156,7 +200,7 @@ export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>)
               })}
             </div>
 
-            {/* CTA específico para fase de Verificação */}
+            {/* CTA: Verificação (status=verificacao) */}
             {capa.status === 'verificacao' && (
               <Link
                 href={`/capa/${capa.id}/verificacao`}
@@ -166,7 +210,20 @@ export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>)
               </Link>
             )}
 
-            {currentOrder < STATUS_FLOW.length - 1 && capa.status !== 'verificacao' && (
+            {/* CTA: Reabrir (status=encerrada) */}
+            {isEncerrada && (
+              <button
+                type="button"
+                onClick={handleReabrir}
+                disabled={isReopening}
+                className="w-full mt-5 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors"
+              >
+                {isReopening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                Reabrir CAPA
+              </button>
+            )}
+
+            {currentOrder < STATUS_FLOW.length - 1 && capa.status !== 'verificacao' && !isEncerrada && (
               <div className="mt-5 flex items-start gap-2 text-[11px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2.5 ring-1 ring-slate-100">
                 <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
                 <p>

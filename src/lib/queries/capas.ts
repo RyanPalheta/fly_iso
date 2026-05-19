@@ -26,6 +26,7 @@ export type AcaoComResponsavel = {
   prazo: string | null
   status: string
   evidencia_urls: unknown
+  observacao: string | null
   concluida_em: string | null
   created_at: string
   responsavel: { id: string; nome: string } | null
@@ -85,7 +86,7 @@ export async function getAcoes(capaId: string): Promise<AcaoComResponsavel[]> {
     .from('acoes')
     .select(`
       id, capa_id, descricao, prazo, status,
-      evidencia_urls, concluida_em, created_at,
+      evidencia_urls, observacao, concluida_em, created_at,
       responsavel:usuarios!acoes_responsavel_id_fkey ( id, nome )
     `)
     .eq('capa_id', capaId)

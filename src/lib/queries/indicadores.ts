@@ -1,5 +1,5 @@
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { calcSemaforo } from '@/lib/utils/indicadores-utils'
 export { calcSemaforo } from '@/lib/utils/indicadores-utils'
 
@@ -49,9 +49,11 @@ export type IndicadorStats = {
 
 
 export async function listIndicadores(): Promise<IndicadorComRelacoes[]> {
-  const sb = await createClient()
+  // Service client: RLS exigia usuario_unidades configurado, bloqueando seed.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createServiceClient() as any
 
-  const { data, error } = await (sb as any)
+  const { data, error } = await sb
     .from('indicadores')
     .select(`
       *,
@@ -68,7 +70,7 @@ export async function listIndicadores(): Promise<IndicadorComRelacoes[]> {
 
   let ultimosResultados: ResultadoRow[] = []
   if (ids.length > 0) {
-    const { data: res } = await (sb as any)
+    const { data: res } = await sb
       .from('resultados_indicadores')
       .select('*')
       .in('indicador_id', ids)
@@ -90,9 +92,10 @@ export async function listIndicadores(): Promise<IndicadorComRelacoes[]> {
 }
 
 export async function getIndicador(id: string): Promise<IndicadorComRelacoes | null> {
-  const sb = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createServiceClient() as any
 
-  const { data, error } = await (sb as any)
+  const { data, error } = await sb
     .from('indicadores')
     .select(`
       *,
@@ -105,7 +108,7 @@ export async function getIndicador(id: string): Promise<IndicadorComRelacoes | n
   if (error || !data) return null
 
   // Último resultado
-  const { data: res } = await (sb as any)
+  const { data: res } = await sb
     .from('resultados_indicadores')
     .select('*')
     .eq('indicador_id', id)
@@ -117,9 +120,10 @@ export async function getIndicador(id: string): Promise<IndicadorComRelacoes | n
 }
 
 export async function getResultados(indicadorId: string): Promise<ResultadoRow[]> {
-  const sb = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createServiceClient() as any
 
-  const { data, error } = await (sb as any)
+  const { data, error } = await sb
     .from('resultados_indicadores')
     .select('*')
     .eq('indicador_id', indicadorId)
