@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { computeCapaStatus } from '@/lib/utils/capa-status'
 import type { CapaStatus } from '@/types/database'
 
 export interface CreateCapaInput {
@@ -88,6 +89,52 @@ export async function createCapa(input: CreateCapaInput): Promise<ActionResult> 
   return { ok: true, id: (data as { id: string }).id }
 }
 
+/**
+ * Recalcula e atualiza o status do CAPA com base no estado atual dos dados.
+ * Roda em toda mutação (causa raiz, criação/atualização de ação, verificação).
+ *
+ * Se a CAPA já está encerrada manualmente, NÃO sobrescreve.
+ */
+async function recalcularStatus(capaId: string): Promise<void> {
+  const sb = await sbService()
+
+  const [{ data: capa }, { data: acoes }, { data: verificacoes }] = await Promise.all([
+    sb.from('capas')
+      .select('status, causa_raiz_metodo, causa_raiz_dados')
+      .eq('id', capaId)
+      .single(),
+    sb.from('acoes')
+      .select('status')
+      .eq('capa_id', capaId),
+    sb.from('verificacoes_eficacia')
+      .select('eficaz')
+      .eq('capa_id', capaId),
+  ])
+
+  if (!capa) return
+
+  // Se já está encerrada manualmente, não altera
+  // (encerrada_em != null indica encerramento explícito)
+  const capaTyped = capa as { status: CapaStatus; causa_raiz_metodo: string | null; causa_raiz_dados: unknown }
+
+  const novoStatus = computeCapaStatus({
+    causaRaizMetodo: capaTyped.causa_raiz_metodo,
+    causaRaizDados:  capaTyped.causa_raiz_dados,
+    acoes:           (acoes ?? []) as Array<{ status: string }>,
+    verificacoes:    (verificacoes ?? []) as Array<{ eficaz: boolean | null }>,
+  })
+
+  if (novoStatus !== capaTyped.status) {
+    await sb
+      .from('capas')
+      .update({
+        status: novoStatus,
+        ...(novoStatus === 'encerrada' ? { encerrada_em: new Date().toISOString() } : {}),
+      })
+      .eq('id', capaId)
+  }
+}
+
 export async function saveCincoPortques(input: SaveCincoPortquesInput): Promise<ActionResult> {
   const userSb = await createClient()
   const { data: { user } } = await userSb.auth.getUser()
@@ -100,7 +147,86 @@ export async function saveCincoPortques(input: SaveCincoPortquesInput): Promise<
     .eq('id', input.capaId)
 
   if (error) return { ok: false, error: (error as { message: string }).message }
+
+  await recalcularStatus(input.capaId)
   revalidatePath(`/capa/${input.capaId}`)
+  return { ok: true }
+}
+
+export interface SaveIshikawaInput {
+  capaId: string
+  categorias: {
+    metodo:        string[]
+    maquina:       string[]
+    mao_de_obra:   string[]
+    material:      string[]
+    medida:        string[]
+    meio_ambiente: string[]
+  }
+}
+
+export async function saveIshikawa(input: SaveIshikawaInput): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  const sb = await sbService()
+  const { error } = await sb
+    .from('capas')
+    .update({
+      causa_raiz_metodo: 'ishikawa',
+      causa_raiz_dados:  { categorias: input.categorias },
+    })
+    .eq('id', input.capaId)
+
+  if (error) return { ok: false, error: (error as { message: string }).message }
+
+  await recalcularStatus(input.capaId)
+  revalidatePath(`/capa/${input.capaId}`)
+  return { ok: true }
+}
+
+export interface SaveTextoLivreInput {
+  capaId: string
+  texto:  string
+}
+
+export async function saveTextoLivre(input: SaveTextoLivreInput): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  const sb = await sbService()
+  const { error } = await sb
+    .from('capas')
+    .update({
+      causa_raiz_metodo: 'texto_livre',
+      causa_raiz_dados:  { texto: input.texto },
+    })
+    .eq('id', input.capaId)
+
+  if (error) return { ok: false, error: (error as { message: string }).message }
+
+  await recalcularStatus(input.capaId)
+  revalidatePath(`/capa/${input.capaId}`)
+  return { ok: true }
+}
+
+export async function setCausaRaizMetodo(capaId: string, metodo: '5_porques' | 'ishikawa' | 'texto_livre'): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  const sb = await sbService()
+  // Apenas troca o método se ainda não há dados (ou força reset)
+  const { error } = await sb
+    .from('capas')
+    .update({ causa_raiz_metodo: metodo, causa_raiz_dados: {} })
+    .eq('id', capaId)
+
+  if (error) return { ok: false, error: (error as { message: string }).message }
+  await recalcularStatus(capaId)
+  revalidatePath(`/capa/${capaId}`)
   return { ok: true }
 }
 
@@ -123,6 +249,8 @@ export async function createAcao(input: CreateAcaoInput): Promise<ActionResult> 
     .single()
 
   if (error) return { ok: false, error: (error as { message: string }).message }
+
+  await recalcularStatus(input.capaId)
   revalidatePath(`/capa/${input.capaId}`)
   return { ok: true, id: (data as { id: string }).id }
 }
@@ -143,6 +271,8 @@ export async function updateAcaoStatus(
     .eq('id', acaoId)
 
   if (error) return { ok: false, error: (error as { message: string }).message }
+
+  await recalcularStatus(capaId)
   revalidatePath(`/capa/${capaId}`)
   return { ok: true }
 }

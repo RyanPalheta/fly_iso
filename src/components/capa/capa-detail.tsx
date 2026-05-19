@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, Edit3, ExternalLink, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { CincoPorquesEditor } from '@/components/capa/cinco-porques-editor'
+import { CausaRaizSelector } from '@/components/capa/causa-raiz-selector'
 import { PlanoAcaoTable } from '@/components/capa/plano-acao-table'
 import type { CapaComRelacoes, AcaoComResponsavel } from '@/lib/queries/capas'
 import type { UsuarioBasico } from '@/lib/queries/areas'
@@ -35,16 +35,8 @@ const STATUS_ORDER: Record<CapaStatus, number> = {
   em_execucao: 3, verificacao: 4, encerrada: 5, reaberta: 1,
 }
 
-function parsePortques(dados: unknown): Array<{ ordem: number; porque: string; resposta: string }> {
-  if (!dados || typeof dados !== 'object') return []
-  const d = dados as { porques?: unknown[] }
-  if (!Array.isArray(d.porques)) return []
-  return d.porques as Array<{ ordem: number; porque: string; resposta: string }>
-}
-
 export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>) {
   const currentOrder = STATUS_ORDER[capa.status] ?? 0
-  const porques = parsePortques(capa.causa_raiz_dados)
 
   return (
     <div className="space-y-6">
@@ -99,18 +91,21 @@ export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>)
             )}
           </div>
 
-          {/* 5 Porquês */}
+          {/* Causa Raiz — método selecionável (5 Porquês / Ishikawa / Texto Livre) */}
           <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Análise de Causa Raiz</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Metodologia dos 5 Porquês</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Escolha o método mais adequado ao tipo de problema.
+                </p>
               </div>
-              <span className="text-[10px] font-bold text-blue-700 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded-full">
-                5 Porquês
-              </span>
             </div>
-            <CincoPorquesEditor capaId={capa.id} initialData={porques} />
+            <CausaRaizSelector
+              capaId={capa.id}
+              metodo={capa.causa_raiz_metodo}
+              dados={capa.causa_raiz_dados}
+            />
           </div>
 
           {/* Plano de Ação */}

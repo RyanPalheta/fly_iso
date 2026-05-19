@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { severidadePorDesvio } from '@/lib/utils/capa-status'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function sbService(): Promise<any> {
@@ -123,6 +124,10 @@ export async function lancarResultado(input: LancarResultadoInput): Promise<Acti
     }
     const codigoNC = `NC-${String(maxNC + 1).padStart(3, '0')}`
 
+    // Severidade automática baseada no desvio
+    //   < 50% → crítica  ·  < 80% → maior  ·  ≥ 80% → menor
+    const sev = severidadePorDesvio(input.valor, ind.meta)
+
     const { data: nc } = await sb
       .from('nao_conformidades')
       .insert({
@@ -133,9 +138,10 @@ export async function lancarResultado(input: LancarResultadoInput): Promise<Acti
         responsavel_id:  ind.responsavel_id ?? null,
         detectado_por:   user.id,
         origem:          'indicador',
-        severidade:      'menor',
+        severidade:      sev,
         status:          'registrada',
         indicador_id:    input.indicadorId,
+        tipo_acao:       'preventiva',  // indicadores são oportunidades preventivas
       })
       .select('id')
       .single()
