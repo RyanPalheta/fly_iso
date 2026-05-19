@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Search, Filter, Plus, ChevronLeft, ChevronRight, ChevronDown,
   FileText, CheckCircle2, Hourglass, FolderOpen, FileType,
+  Calendar, MapPin, User, X,
 } from 'lucide-react'
 import { StatusBadge } from '@/components/shared/status-badge'
 import type { DocumentoComArea } from '@/lib/queries/documentos'
@@ -99,20 +100,55 @@ function InsightCard({
 
 export function DocumentTable({ documentos }: Readonly<DocumentTableProps>) {
   const router = useRouter()
-  const [search, setSearch]           = useState('')
-  const [tipoFilter, setTipoFilter]   = useState('Todos')
-  const [statusFilter, setStatusFilter] = useState('Todos')
+  const [search, setSearch]               = useState('')
+  const [tipoFilter, setTipoFilter]       = useState('Todos')
+  const [statusFilter, setStatusFilter]   = useState('Todos')
+
+  // ── Filtros avançados ──
+  const [showAdvanced, setShowAdvanced]   = useState(false)
+  const [areaFilter, setAreaFilter]       = useState('Todas')
+  const [respFilter, setRespFilter]       = useState('Todos')
+  const [dataDe, setDataDe]               = useState('')
+  const [dataAte, setDataAte]             = useState('')
+
+  // Opções dinâmicas baseadas nos dados disponíveis
+  const areasUnicas = Array.from(new Set(
+    documentos.map((d) => d.areas?.nome).filter(Boolean) as string[]
+  )).sort()
+  const responsaveisUnicos = Array.from(new Set(
+    documentos.map((d) => d.responsavel?.nome).filter(Boolean) as string[]
+  )).sort()
+
+  const advancedCount =
+    (areaFilter !== 'Todas' ? 1 : 0) +
+    (respFilter !== 'Todos' ? 1 : 0) +
+    (dataDe ? 1 : 0) +
+    (dataAte ? 1 : 0)
+
+  const clearAdvanced = () => {
+    setAreaFilter('Todas'); setRespFilter('Todos'); setDataDe(''); setDataAte('')
+  }
 
   const filtered = documentos.filter((doc) => {
     const q = search.toLowerCase()
-    const area = doc.areas?.nome ?? ''
+    const areaNome = doc.areas?.nome ?? ''
+    const respNome = doc.responsavel?.nome ?? ''
+
     const matchSearch =
       doc.titulo.toLowerCase().includes(q) ||
       doc.codigo.toLowerCase().includes(q) ||
-      area.toLowerCase().includes(q)
+      areaNome.toLowerCase().includes(q)
     const matchTipo   = tipoFilter   === 'Todos' || doc.tipo   === tipoFilter
     const matchStatus = statusFilter === 'Todos' || doc.status === statusFilter
-    return matchSearch && matchTipo && matchStatus
+    const matchArea   = areaFilter   === 'Todas' || areaNome === areaFilter
+    const matchResp   = respFilter   === 'Todos' || respNome === respFilter
+
+    // Compara YYYY-MM-DD lexicalmente (campo é timestamp; pegamos só a data)
+    const dataDoc = doc.updated_at?.split('T')[0] ?? ''
+    const matchDataDe  = !dataDe  || dataDoc >= dataDe
+    const matchDataAte = !dataAte || dataDoc <= dataAte
+
+    return matchSearch && matchTipo && matchStatus && matchArea && matchResp && matchDataDe && matchDataAte
   })
 
   return (
@@ -161,10 +197,21 @@ export function DocumentTable({ documentos }: Readonly<DocumentTableProps>) {
 
             <button
               type="button"
-              className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 transition-colors shadow-sm"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className={cn(
+                'flex items-center gap-1.5 text-xs font-semibold border rounded-lg px-3 py-2 transition-colors shadow-sm',
+                showAdvanced || advancedCount > 0
+                  ? 'bg-blue-50 border-blue-200 text-blue-700'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+              )}
             >
-              <Filter className="h-3.5 w-3.5 text-slate-400" />
+              <Filter className={cn('h-3.5 w-3.5', advancedCount > 0 ? 'text-blue-600' : 'text-slate-400')} />
               Mais filtros
+              {advancedCount > 0 && (
+                <span className="ml-1 bg-blue-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {advancedCount}
+                </span>
+              )}
             </button>
           </div>
 
@@ -178,6 +225,97 @@ export function DocumentTable({ documentos }: Readonly<DocumentTableProps>) {
           </button>
         </div>
       </div>
+
+      {/* ── Painel de Filtros Avançados (expansível) ── */}
+      {showAdvanced && (
+        <div className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-black/5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-bold text-slate-700">Filtros avançados</h3>
+            <div className="flex items-center gap-2">
+              {advancedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAdvanced}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-red-600 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                  Limpar
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(false)}
+                className="text-slate-400 hover:text-slate-700"
+                aria-label="Fechar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Área */}
+            <div>
+              <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                <MapPin className="h-3 w-3" /> Área
+              </label>
+              <select
+                value={areaFilter}
+                onChange={(e) => setAreaFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 rounded-lg text-xs text-slate-700 border-none focus:ring-2 focus:ring-blue-500/30 focus:outline-none cursor-pointer"
+              >
+                <option value="Todas">Todas as áreas</option>
+                {areasUnicas.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+
+            {/* Responsável */}
+            <div>
+              <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                <User className="h-3 w-3" /> Responsável
+              </label>
+              <select
+                value={respFilter}
+                onChange={(e) => setRespFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 rounded-lg text-xs text-slate-700 border-none focus:ring-2 focus:ring-blue-500/30 focus:outline-none cursor-pointer"
+              >
+                <option value="Todos">Todos</option>
+                {responsaveisUnicos.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+
+            {/* Data De */}
+            <div>
+              <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                <Calendar className="h-3 w-3" /> Atualizado de
+              </label>
+              <input
+                type="date"
+                value={dataDe}
+                onChange={(e) => setDataDe(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 rounded-lg text-xs text-slate-700 border-none focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
+              />
+            </div>
+
+            {/* Data Até */}
+            <div>
+              <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                <Calendar className="h-3 w-3" /> Atualizado até
+              </label>
+              <input
+                type="date"
+                value={dataAte}
+                onChange={(e) => setDataAte(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 rounded-lg text-xs text-slate-700 border-none focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <p className="text-[10px] text-slate-400 mt-3">
+            Exibindo <strong className="text-slate-700">{filtered.length}</strong> de {documentos.length} documentos.
+          </p>
+        </div>
+      )}
 
       {/* ── Insight cards (métricas no topo) ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

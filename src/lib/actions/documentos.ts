@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import type { DocumentoStatus } from '@/types/database'
+import type { DocumentoStatus, DocumentoTipo } from '@/types/database'
 
 export interface ActionResult {
   ok:    boolean
@@ -13,6 +13,76 @@ export interface ActionResult {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function sbService(): Promise<any> {
   return createServiceClient() as any
+}
+
+/** Gera próximo código DOC-XXX baseado no maior existente. */
+async function gerarCodigoDocumento(): Promise<string> {
+  const sb = await sbService()
+  const { data } = await sb
+    .from('documentos')
+    .select('codigo')
+    .order('created_at', { ascending: false })
+    .limit(100)
+
+  let max = 0
+  for (const row of (data ?? []) as Array<{ codigo: string }>) {
+    const m = row.codigo?.match(/DOC-(\d+)/)
+    if (m) max = Math.max(max, parseInt(m[1], 10))
+  }
+  return `DOC-${String(max + 1).padStart(3, '0')}`
+}
+
+export interface CreateDocumentoInput {
+  titulo:         string
+  tipo:           DocumentoTipo
+  descricao?:     string
+  areaId:         string
+  responsavelId:  string
+  tags?:          string[]
+}
+
+/** Cria documento + versão inicial (v0, sem arquivo). */
+export async function createDocumento(input: CreateDocumentoInput): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  if (!input.titulo.trim()) return { ok: false, error: 'Título obrigatório.' }
+  if (!input.areaId)        return { ok: false, error: 'Área obrigatória.' }
+  if (!input.responsavelId) return { ok: false, error: 'Responsável obrigatório.' }
+
+  const codigo = await gerarCodigoDocumento()
+  const sb = await sbService()
+
+  const { data: doc, error: docErr } = await sb
+    .from('documentos')
+    .insert({
+      codigo,
+      titulo:         input.titulo.trim(),
+      tipo:           input.tipo,
+      descricao:      input.descricao?.trim() || null,
+      area_id:        input.areaId,
+      responsavel_id: input.responsavelId,
+      tags:           input.tags && input.tags.length > 0 ? input.tags : null,
+      status:         'rascunho',
+      revisao_atual:  0,
+    })
+    .select('id')
+    .single()
+
+  if (docErr) return { ok: false, error: docErr.message }
+
+  // Cria versão inicial v0 (sem arquivo — usuário fará upload depois)
+  await sb.from('versoes').insert({
+    documento_id:        (doc as { id: string }).id,
+    numero_revisao:      0,
+    descricao_alteracao: 'Versão inicial — criação do documento.',
+    criado_por:          user.id,
+    status:              'pendente',
+  })
+
+  revalidatePath('/documentos')
+  return { ok: true, id: (doc as { id: string }).id }
 }
 
 export interface UpdateDocumentoInput {

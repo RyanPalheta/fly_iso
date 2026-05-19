@@ -38,6 +38,30 @@ export function FileUpload({
     onError?.(msg)
   }
 
+  /**
+   * Sanitiza nome para usar como key do Supabase Storage.
+   * Supabase NÃO aceita: espaços, acentos, parênteses, vírgulas, etc.
+   * Só permite [a-zA-Z0-9._/-]. Preservamos a extensão.
+   * O nome ORIGINAL (com acentos) continua sendo exibido no UI.
+   */
+  function sanitizeForStorage(name: string): string {
+    // Separa nome e extensão
+    const lastDot = name.lastIndexOf('.')
+    const ext  = lastDot > 0 ? name.slice(lastDot).toLowerCase() : ''
+    const base = lastDot > 0 ? name.slice(0, lastDot) : name
+
+    const cleanBase = base
+      .normalize('NFD')                  // separa acentos: "ç" → "ç"
+      .replace(/[̀-ͯ]/g, '')   // remove diacríticos
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, '-')    // troca tudo não permitido por "-"
+      .replace(/^-+|-+$/g, '')           // remove "-" do início/fim
+      .replace(/-{2,}/g, '-')            // colapsa múltiplos "-"
+      .slice(0, 80)                       // limita tamanho
+
+    return (cleanBase || 'arquivo') + ext
+  }
+
   async function uploadFile(file: File) {
     const maxBytes = maxSizeMB * 1024 * 1024
     if (file.size > maxBytes) {
@@ -51,7 +75,10 @@ export function FileUpload({
     setErrorMsg(null)
 
     const sb          = createClient()
-    const storagePath = path + file.name
+    // Key de storage: sanitizada (sem espaços/acentos). Mantém file.name
+    // original para exibir no UI e como "nome" enviado ao callback.
+    const safeFileName = sanitizeForStorage(file.name)
+    const storagePath  = path + safeFileName
 
     // Use XMLHttpRequest for upload progress
     const {
