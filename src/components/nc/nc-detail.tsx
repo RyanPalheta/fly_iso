@@ -199,7 +199,10 @@ export function NCDetail({
               Relatada por {detectorNome} em {fmtDate(nc.created_at)} · {nc.areas?.nome ?? '—'}
               {nc.areas?.unidades?.nome ? ` · ${nc.areas.unidades.nome}` : ''}
             </p>
-            <p className="text-sm text-slate-600 leading-relaxed mt-5 whitespace-pre-wrap break-words">
+            <p
+              className="text-sm text-slate-600 leading-relaxed mt-5 whitespace-pre-wrap break-words"
+              style={{ overflowWrap: 'anywhere' }}
+            >
               {nc.descricao}
             </p>
           </div>

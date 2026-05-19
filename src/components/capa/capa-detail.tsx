@@ -95,13 +95,18 @@ export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>)
               )}
             </div>
 
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-1">{capa.codigo}</h1>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-1 break-words">{capa.codigo}</h1>
             <p className="text-xs text-slate-500 font-medium mb-4">
               Aberta em {fmt(capa.created_at)} · Responsável: {capa.responsavel?.nome ?? '—'}
             </p>
 
             {capa.descricao && (
-              <p className="text-sm text-slate-600 leading-relaxed">{capa.descricao}</p>
+              <p
+                className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap break-words"
+                style={{ overflowWrap: 'anywhere' }}
+              >
+                {capa.descricao}
+              </p>
             )}
 
             {capa.nc && (

@@ -9,8 +9,11 @@ import {
 } from 'lucide-react'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { FileUpload } from '@/components/shared/file-upload'
+import { DistribuicaoSection } from '@/components/documentos/distribuicao-section'
 import { updateDocumento, createVersao } from '@/lib/actions/documentos'
 import type { DocumentoComArea } from '@/lib/queries/documentos'
+import type { UnidadeComAreas } from '@/lib/queries/configuracoes'
+import type { DistribuicaoRow } from '@/lib/queries/distribuicao'
 import { cn } from '@/lib/utils'
 
 interface VersaoRow {
@@ -26,8 +29,10 @@ interface VersaoRow {
 }
 
 interface DocumentDetailProps {
-  doc:     DocumentoComArea
-  versoes: VersaoRow[]
+  doc:           DocumentoComArea
+  versoes:       VersaoRow[]
+  unidades:      UnidadeComAreas[]
+  distribuicoes: DistribuicaoRow[]
 }
 
 function fmt(iso: string | null): string {
@@ -35,13 +40,16 @@ function fmt(iso: string | null): string {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-export function DocumentDetail({ doc, versoes }: Readonly<DocumentDetailProps>) {
+export function DocumentDetail({
+  doc, versoes, unidades, distribuicoes,
+}: Readonly<DocumentDetailProps>) {
   const router = useRouter()
   const area = doc.areas?.nome ?? '—'
   const unidade = doc.areas?.unidades?.nome ?? null
 
   // Versão atual = primeira da lista (ordenada desc)
   const versaoAtual = versoes[0]
+  const isObsoleto = doc.status === 'obsoleto'
 
   // ── Edição inline ────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false)
@@ -229,7 +237,10 @@ export function DocumentDetail({ doc, versoes }: Readonly<DocumentDetailProps>) 
                   )}
                 </div>
               ) : doc.descricao ? (
-                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">{doc.descricao}</p>
+                <p
+                  className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap break-words"
+                  style={{ overflowWrap: 'anywhere' }}
+                >{doc.descricao}</p>
               ) : (
                 <p className="text-slate-400 text-sm italic">Sem descrição cadastrada.</p>
               )}
@@ -271,6 +282,15 @@ export function DocumentDetail({ doc, versoes }: Readonly<DocumentDetailProps>) 
               )}
             </article>
           </div>
+
+          {/* Distribuição (Fase B — auditor) */}
+          <DistribuicaoSection
+            documentoId={doc.id}
+            versaoAtualId={versaoAtual?.id ?? null}
+            unidades={unidades}
+            distribuicoes={distribuicoes}
+            readOnly={isObsoleto}
+          />
 
           {/* Nova Versão (expansível) */}
           <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
