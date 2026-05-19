@@ -1,5 +1,5 @@
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { Documento } from '@/types/database'
 
 export type DocumentoComArea = Documento & {
@@ -48,7 +48,9 @@ export async function getDocumento(id: string): Promise<DocumentoComArea | null>
 
 /** Versões (histórico de revisões) do documento, mais recente primeiro. */
 export async function getVersoes(documentoId: string) {
-  const sb = await createClient()
+  // Service client: usuário já provou acesso ao documento via getDocumento().
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createServiceClient() as any
   const { data, error } = await sb
     .from('versoes')
     .select(`

@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Filter, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Search, Filter, Plus, ChevronLeft, ChevronRight, ChevronDown,
+  FileText, CheckCircle2, Hourglass, FolderOpen, FileType,
+} from 'lucide-react'
 import { StatusBadge } from '@/components/shared/status-badge'
 import type { DocumentoComArea } from '@/lib/queries/documentos'
 import { cn } from '@/lib/utils'
@@ -40,21 +43,55 @@ function initials(nome: string | null | undefined): string {
   return nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
 }
 
+interface FilterSelectProps {
+  icon:      React.ElementType
+  value:     string
+  onChange:  (v: string) => void
+  ariaLabel: string
+  children:  React.ReactNode
+}
+
+function FilterSelect({
+  icon: Icon, value, onChange, ariaLabel, children,
+}: Readonly<FilterSelectProps>) {
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg pl-3 pr-9 py-2 shadow-sm transition-colors min-w-[160px]">
+        <Icon className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label={ariaLabel}
+          className="appearance-none bg-transparent text-xs font-semibold text-slate-700 border-none focus:outline-none focus:ring-0 pr-2 cursor-pointer flex-1 truncate"
+        >
+          {children}
+        </select>
+      </div>
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+    </div>
+  )
+}
+
 interface InsightCardProps {
-  emoji: string
+  icon: React.ElementType
+  iconBg: string
+  iconColor: string
   title: string
   value: number
   sub: string
-  color: string
-  gradient: string
+  valueColor: string
 }
 
-function InsightCard({ emoji, title, value, sub, color, gradient }: Readonly<InsightCardProps>) {
+function InsightCard({
+  icon: Icon, iconBg, iconColor, title, value, sub, valueColor,
+}: Readonly<InsightCardProps>) {
   return (
-    <div className={cn('bg-gradient-to-br p-6 rounded-2xl border border-slate-100 shadow-sm', gradient)}>
-      <div className="text-2xl mb-3">{emoji}</div>
+    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-4', iconBg)}>
+        <Icon className={cn('h-5 w-5', iconColor)} />
+      </div>
       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{title}</p>
-      <p className={cn('text-3xl font-extrabold', color)}>{value}</p>
+      <p className={cn('text-3xl font-extrabold tabular-nums', valueColor)}>{value}</p>
       <p className="text-xs text-slate-400 mt-1">{sub}</p>
     </div>
   )
@@ -94,33 +131,40 @@ export function DocumentTable({ documentos }: Readonly<DocumentTableProps>) {
 
         <div className="flex flex-wrap items-center gap-3">
 
-          {/* Filter bar */}
-          <div className="flex items-center gap-1 bg-white py-1 px-2 rounded-xl shadow-sm border border-slate-200/70">
-            <select
-              className="text-xs border-none focus:ring-0 bg-transparent text-slate-600 py-1.5 px-1 cursor-pointer"
+          {/* Filter bar — selects estilizados como botões consistentes */}
+          <div className="flex items-center gap-2">
+            <FilterSelect
+              icon={FileType}
               value={tipoFilter}
-              onChange={(e) => setTipoFilter(e.target.value)}
+              onChange={setTipoFilter}
+              ariaLabel="Filtrar por tipo"
             >
               {TIPO_OPTIONS.map((t) => (
                 <option key={t} value={t}>
-                  {t === 'Todos' ? 'Todos os Tipos' : (TIPO_META[t]?.label ?? t)}
+                  {t === 'Todos' ? 'Todos os tipos' : (TIPO_META[t]?.label ?? t)}
                 </option>
               ))}
-            </select>
-            <div className="h-4 w-px bg-slate-200 mx-1" />
-            <select
-              className="text-xs border-none focus:ring-0 bg-transparent text-slate-600 py-1.5 px-1 cursor-pointer"
+            </FilterSelect>
+
+            <FilterSelect
+              icon={CheckCircle2}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={setStatusFilter}
+              ariaLabel="Filtrar por status"
             >
               {STATUS_OPTIONS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                <option key={s.value} value={s.value}>
+                  {s.value === 'Todos' ? 'Todos os status' : s.label}
+                </option>
               ))}
-            </select>
-            <div className="h-4 w-px bg-slate-200 mx-1" />
-            <button className="px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
-              <Filter className="h-3 w-3" />
-              Mais Filtros
+            </FilterSelect>
+
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 transition-colors shadow-sm"
+            >
+              <Filter className="h-3.5 w-3.5 text-slate-400" />
+              Mais filtros
             </button>
           </div>
 
@@ -138,28 +182,31 @@ export function DocumentTable({ documentos }: Readonly<DocumentTableProps>) {
       {/* ── Insight cards (métricas no topo) ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <InsightCard
-          emoji="📋"
+          icon={FolderOpen}
+          iconBg="bg-blue-100"
+          iconColor="text-blue-700"
           title="Total no Repositório"
           value={documentos.length}
           sub="documentos cadastrados"
-          color="text-blue-700"
-          gradient="from-white to-blue-50/40"
+          valueColor="text-slate-900"
         />
         <InsightCard
-          emoji="✅"
+          icon={CheckCircle2}
+          iconBg="bg-emerald-100"
+          iconColor="text-emerald-700"
           title="Em Conformidade"
-          value={documentos.filter((d) => d.status === 'aprovado').length}
-          sub="documentos aprovados"
-          color="text-emerald-700"
-          gradient="from-white to-emerald-50/40"
+          value={documentos.filter((d) => d.status === 'aprovado' || d.status === 'vigente').length}
+          sub="aprovados / vigentes"
+          valueColor="text-slate-900"
         />
         <InsightCard
-          emoji="⏳"
+          icon={Hourglass}
+          iconBg="bg-amber-100"
+          iconColor="text-amber-700"
           title="Aguardando Revisão"
           value={documentos.filter((d) => d.status === 'em_revisao').length}
           sub="em aprovação"
-          color="text-amber-600"
-          gradient="from-white to-amber-50/40"
+          valueColor="text-slate-900"
         />
       </div>
 

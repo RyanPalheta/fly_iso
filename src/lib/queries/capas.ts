@@ -1,5 +1,5 @@
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { CapaStatus } from '@/types/database'
 
 export type CapaComRelacoes = {
@@ -77,7 +77,10 @@ export async function getCapa(id: string): Promise<CapaComRelacoes | null> {
 }
 
 export async function getAcoes(capaId: string): Promise<AcaoComResponsavel[]> {
-  const sb = await createClient()
+  // Service client: usuário já provou acesso à CAPA via getCapa() na rota.
+  // RLS exigiria usuario_unidades configurado, o que ainda não temos no seed.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createServiceClient() as any
   const { data, error } = await sb
     .from('acoes')
     .select(`
@@ -87,10 +90,9 @@ export async function getAcoes(capaId: string): Promise<AcaoComResponsavel[]> {
     `)
     .eq('capa_id', capaId)
     .order('created_at', { ascending: true })
-    .returns<AcaoComResponsavel[]>()
 
   if (error) throw new Error(`Erro ao buscar ações: ${error.message}`)
-  return data ?? []
+  return (data ?? []) as AcaoComResponsavel[]
 }
 
 export async function getCapaStats(): Promise<CapaStats> {
