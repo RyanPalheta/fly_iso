@@ -1,12 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
 import {
-  ArrowLeft, Edit3, FileImage, FileText, FileCode, Plus, Send,
-  Share2, Check, CheckCircle2, Clock,
+  ArrowLeft, Edit3, FileImage, FileText, FileCode, FileQuestion,
+  Share2, Check, CheckCircle2, Clock, MessageSquare, UserCircle,
 } from 'lucide-react'
-import { mockNCDetalhe } from '@/data/mockData'
 import type { NCComRelacoes } from '@/lib/queries/nao-conformidades'
 import { cn } from '@/lib/utils'
 
@@ -24,47 +22,127 @@ function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-function EvidenceThumbnail({
-  tipo, label, nome,
-}: Readonly<{ tipo: 'image' | 'pdf' | 'log'; label: string; nome: string }>) {
-  const Icon = tipo === 'image' ? FileImage : tipo === 'pdf' ? FileText : FileCode
+function initials(nome: string | null | undefined): string {
+  if (!nome) return '—'
+  const parts = nome.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+/** Detecta tipo do arquivo pelo nome/URL para escolher ícone + cor. */
+function detectFileType(filename: string): 'image' | 'pdf' | 'doc' | 'sheet' | 'log' | 'other' {
+  const lower = filename.toLowerCase()
+  if (/\.(png|jpe?g|webp|gif|bmp|svg)$/.test(lower)) return 'image'
+  if (lower.endsWith('.pdf')) return 'pdf'
+  if (/\.(docx?|odt)$/.test(lower)) return 'doc'
+  if (/\.(xlsx?|csv|tsv|ods)$/.test(lower)) return 'sheet'
+  if (/\.(log|txt|json|xml|yaml)$/.test(lower)) return 'log'
+  return 'other'
+}
+
+interface EvidenciaShape { url: string; nome: string }
+
+/** Parseia evidencia_urls (JSONB) — aceita formato novo {url,nome} ou legado string[]. */
+function parseEvidencias(raw: unknown): EvidenciaShape[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((item) => {
+    if (typeof item === 'string') {
+      const fname = item.split('/').pop() ?? item
+      return { url: item, nome: fname }
+    }
+    if (item && typeof item === 'object' && 'url' in item) {
+      const obj = item as { url?: unknown; nome?: unknown }
+      return {
+        url:  typeof obj.url  === 'string' ? obj.url  : '',
+        nome: typeof obj.nome === 'string' ? obj.nome : 'arquivo',
+      }
+    }
+    return { url: '', nome: 'arquivo' }
+  }).filter((ev) => ev.url)
+}
+
+function EvidenceCard({ ev }: Readonly<{ ev: EvidenciaShape }>) {
+  const tipo = detectFileType(ev.nome)
+  const Icon =
+      tipo === 'image' ? FileImage
+    : tipo === 'pdf'   ? FileText
+    : tipo === 'doc'   ? FileText
+    : tipo === 'sheet' ? FileCode
+    : tipo === 'log'   ? FileCode
+    : FileQuestion
+
   const bg =
-    tipo === 'image' ? 'from-slate-200 to-slate-300'
-    : tipo === 'pdf' ? 'from-red-100 to-red-200'
-    : 'from-amber-100 to-amber-200'
+      tipo === 'image' ? 'from-blue-100 to-blue-200'
+    : tipo === 'pdf'   ? 'from-red-100 to-red-200'
+    : tipo === 'doc'   ? 'from-slate-200 to-slate-300'
+    : tipo === 'sheet' ? 'from-emerald-100 to-emerald-200'
+    : tipo === 'log'   ? 'from-amber-100 to-amber-200'
+    : 'from-slate-100 to-slate-200'
+
+  const isImage = tipo === 'image'
+  const fileLabel = ev.nome.replace(/\.[^.]+$/, '') // sem extensão
 
   return (
-    <div className="group cursor-pointer">
-      <div className={cn('aspect-square rounded-xl bg-gradient-to-br flex items-center justify-center', bg)}>
-        <Icon className="h-10 w-10 text-slate-500" />
-      </div>
-      <p className="text-xs font-semibold text-slate-900 mt-2 truncate">{label}</p>
-      <p className="text-[10px] text-slate-400 truncate">{nome}</p>
-    </div>
+    <a href={ev.url} target="_blank" rel="noopener noreferrer" className="group cursor-pointer block">
+      {isImage ? (
+        // Imagens: mostra preview real
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={ev.url}
+          alt={ev.nome}
+          className="aspect-square rounded-xl object-cover bg-slate-100 group-hover:opacity-90 transition-opacity"
+        />
+      ) : (
+        <div className={cn(
+          'aspect-square rounded-xl bg-gradient-to-br flex items-center justify-center group-hover:opacity-90 transition-opacity',
+          bg
+        )}>
+          <Icon className="h-10 w-10 text-slate-500" />
+        </div>
+      )}
+      <p className="text-xs font-semibold text-slate-900 mt-2 truncate group-hover:text-blue-700 transition-colors">
+        {fileLabel}
+      </p>
+      <p className="text-[10px] text-slate-400 truncate">{ev.nome}</p>
+    </a>
   )
 }
 
 const NC_STATUS_FLOW: { status: string; label: string; desc: string }[] = [
-  { status: 'registrada',  label: 'Registrada',       desc: 'NC identificada e registrada no sistema' },
-  { status: 'em_analise',  label: 'Em Análise',        desc: 'Equipe de qualidade analisando a NC' },
-  { status: 'em_acao',     label: 'CAPA Iniciada',     desc: 'Plano de ação corretiva em andamento' },
-  { status: 'verificacao', label: 'Verificação',       desc: 'Verificando eficácia das ações tomadas' },
-  { status: 'encerrada',   label: 'Encerrada',         desc: 'NC encerrada com eficácia confirmada' },
+  { status: 'registrada',  label: 'Registrada',    desc: 'NC identificada e registrada no sistema' },
+  { status: 'em_analise',  label: 'Em Análise',    desc: 'Equipe de qualidade analisando a NC' },
+  { status: 'em_acao',     label: 'CAPA Iniciada', desc: 'Plano de ação corretiva em andamento' },
+  { status: 'verificacao', label: 'Verificação',   desc: 'Verificando eficácia das ações tomadas' },
+  { status: 'encerrada',   label: 'Encerrada',     desc: 'NC encerrada com eficácia confirmada' },
 ]
 
 const NC_STATUS_ORDER: Record<string, number> = {
   registrada: 0, em_analise: 1, em_acao: 2, verificacao: 3, encerrada: 4,
 }
 
+/** Extrai o número da cláusula a partir de strings como "4.1 — Contexto da organização". */
+function parseClausula(raw: string | null): { numero: string; titulo: string } {
+  if (!raw) return { numero: '—', titulo: '—' }
+  // Padrão: "4.1 — Contexto da organização"  ou  "4.1 - Contexto..."  ou apenas "4.1"
+  const m = raw.match(/^([\d.]+)\s*[—-]?\s*(.*)$/)
+  if (!m) return { numero: raw, titulo: '' }
+  return { numero: m[1].trim(), titulo: (m[2] ?? '').trim() }
+}
+
 export function NCDetail({ nc }: Readonly<NCDetailProps>) {
-  // Dados auxiliares (evidências/comentários) ainda vêm do mock
-  // até a modelagem dessas tabelas ser finalizada.
-  const mock = mockNCDetalhe
-  const [novoComentario, setNovoComentario] = useState('')
   const sev = nc.severidade ? SEVERIDADE_LABEL[nc.severidade] : null
-  const detectorNome = nc.detector?.nome ?? 'Auditoria'
+  const detectorNome = nc.detector?.nome ?? 'Sistema'
+  const responsavelNome = nc.responsavel?.nome ?? null
   const currentOrder = NC_STATUS_ORDER[nc.status] ?? 0
   const capaJaAberta = nc.status === 'em_acao' || nc.status === 'verificacao' || nc.status === 'encerrada'
+
+  const evidencias = parseEvidencias(nc.evidencia_urls)
+  const clausula = parseClausula(nc.requisito_violado)
+
+  // Os campos novos (tipo_acao / acao_imediata) podem não estar tipados se a
+  // migração 004 não foi aplicada — acessamos via cast seguro.
+  const tipoAcao     = (nc as unknown as { tipo_acao?: string }).tipo_acao
+  const acaoImediata = (nc as unknown as { acao_imediata?: string }).acao_imediata
 
   return (
     <div className="space-y-6">
@@ -96,145 +174,123 @@ export function NCDetail({ nc }: Readonly<NCDetailProps>) {
                   Sem classificação
                 </span>
               )}
-              <button className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+              <button
+                type="button"
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 cursor-not-allowed px-3 py-1.5 rounded-lg"
+                title="Edição em breve"
+                disabled
+              >
                 <Edit3 className="h-3.5 w-3.5" />
                 Editar Detalhes
               </button>
             </div>
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-2">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-2 break-words">
               {nc.codigo}: {nc.titulo}
             </h1>
             <p className="text-xs text-slate-500 font-medium">
               Relatada por {detectorNome} em {fmtDate(nc.created_at)} · {nc.areas?.nome ?? '—'}
               {nc.areas?.unidades?.nome ? ` · ${nc.areas.unidades.nome}` : ''}
             </p>
-            <p className="text-sm text-slate-600 leading-relaxed mt-5 whitespace-pre-wrap">
+            <p className="text-sm text-slate-600 leading-relaxed mt-5 whitespace-pre-wrap break-words">
               {nc.descricao}
             </p>
           </div>
 
-          {/* Evidence gallery */}
+          {/* Evidence gallery — usa nc.evidencia_urls (JSONB) */}
           <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-slate-900">Galeria de Evidências</h2>
-              <button className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
-                <Plus className="h-3.5 w-3.5" />
-                Nova Evidência
-              </button>
+              <h2 className="text-sm font-bold text-slate-900">
+                Galeria de Evidências
+                {evidencias.length > 0 && (
+                  <span className="ml-2 text-[10px] font-bold text-slate-400">
+                    {evidencias.length} {evidencias.length === 1 ? 'arquivo' : 'arquivos'}
+                  </span>
+                )}
+              </h2>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              {mock.evidencias.map((ev) => (
-                <EvidenceThumbnail
-                  key={ev.nome}
-                  tipo={ev.tipo}
-                  label={ev.label}
-                  nome={ev.nome}
-                />
-              ))}
-            </div>
+            {evidencias.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <FileImage className="h-10 w-10 text-slate-200 mb-3" />
+                <p className="text-sm font-semibold text-slate-500">Nenhuma evidência anexada</p>
+                <p className="text-xs text-slate-400 mt-1">Anexe arquivos no formulário de registro.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-4">
+                {evidencias.map((ev, i) => (
+                  <EvidenceCard key={ev.url + i} ev={ev} />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Tipo de Ação + Ação Imediata */}
-          {((nc as any).tipo_acao || (nc as any).acao_imediata) && (
+          {(tipoAcao || acaoImediata) && (
             <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-slate-900">Classificação da Ação</h2>
-                {(nc as any).tipo_acao && (
+                {tipoAcao && (
                   <span className={cn(
                     'px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider',
-                    (nc as any).tipo_acao === 'corretiva'
+                    tipoAcao === 'corretiva'
                       ? 'bg-orange-100 text-orange-700'
                       : 'bg-violet-100 text-violet-700'
                   )}>
-                    {(nc as any).tipo_acao === 'corretiva' ? 'Corretiva' : 'Preventiva'}
+                    {tipoAcao === 'corretiva' ? 'Corretiva' : 'Preventiva'}
                   </span>
                 )}
               </div>
               <p className="text-xs text-slate-500">
-                {(nc as any).tipo_acao === 'corretiva'
+                {tipoAcao === 'corretiva'
                   ? 'NC já ocorreu — necessária ação sobre a causa raiz.'
                   : 'Risco identificado — necessária ação antes que ocorra.'}
               </p>
 
-              {(nc as any).acao_imediata && (
+              {acaoImediata && (
                 <div className="bg-amber-50 rounded-xl p-4 ring-1 ring-amber-200">
                   <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-1.5">
                     Ação Imediata (Contenção)
                   </p>
                   <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
-                    {(nc as any).acao_imediata}
+                    {acaoImediata}
                   </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* ISO clause violated */}
+          {/* ISO clause violated — usa nc.requisito_violado parseado */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 ring-1 ring-blue-200/40">
             <div className="flex items-start gap-4">
               <div className="bg-white w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
-                <span className="font-mono text-sm font-extrabold text-blue-700">9.1</span>
+                <span className="font-mono text-sm font-extrabold text-blue-700">
+                  {clausula.numero}
+                </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-bold text-blue-700 uppercase tracking-widest mb-1">
                   Requisito Violado
                 </p>
                 <h3 className="text-sm font-bold text-slate-900 mb-1">
-                  ISO 9001:2015 — Cláusula 9.1.1
+                  ISO 9001:2015 — Cláusula {clausula.numero}
                 </h3>
-                <p className="text-xs text-slate-600 italic leading-relaxed">
-                  &ldquo;{nc.requisito_violado ?? mock.isoDescricao}&rdquo;
-                </p>
-                <button className="mt-3 text-[10px] font-bold text-blue-700 uppercase tracking-widest hover:underline">
-                  Visualizar cláusula completa →
-                </button>
+                {clausula.titulo && (
+                  <p className="text-xs text-slate-600 italic leading-relaxed">
+                    {clausula.titulo}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Audit discussion */}
+          {/* Comentários — placeholder (sistema ainda não modelado) */}
           <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
-            <h2 className="text-sm font-bold text-slate-900 mb-5">Discussão da Auditoria</h2>
-
-            <div className="space-y-4">
-              {mock.comentarios.map((c) => (
-                <div key={c.autor + c.tempo} className="flex gap-3">
-                  <div className={cn('w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0', c.avatarBg)}>
-                    {c.iniciais}
-                  </div>
-                  <div className="flex-1 min-w-0 bg-slate-50 rounded-xl p-4">
-                    <div className="flex items-baseline justify-between mb-1">
-                      <span className="text-sm font-bold text-slate-900">{c.autor}</span>
-                      <span className="text-[10px] text-slate-400">{c.tempo}</span>
-                    </div>
-                    <p className="text-xs text-slate-600 leading-relaxed">{c.texto}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* New comment */}
-            <div className="flex gap-3 mt-5 pt-5 border-t border-slate-100">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                AS
-              </div>
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  value={novoComentario}
-                  onChange={(e) => setNovoComentario(e.target.value)}
-                  placeholder="Adicione um comentário ou marque um colega..."
-                  className="w-full pl-4 pr-32 py-3 bg-slate-50 rounded-xl text-sm border-none focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  disabled={!novoComentario.trim()}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-blue-700 hover:bg-blue-800 disabled:opacity-40 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all"
-                >
-                  <Send className="h-3 w-3" />
-                  Postar
-                </button>
-              </div>
+            <h2 className="text-sm font-bold text-slate-900 mb-4">Discussão</h2>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <MessageSquare className="h-10 w-10 text-slate-200 mb-3" />
+              <p className="text-sm font-semibold text-slate-500">Discussão indisponível</p>
+              <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                O sistema de comentários colaborativos será disponibilizado em uma próxima versão.
+              </p>
             </div>
           </div>
         </section>
@@ -295,24 +351,54 @@ export function NCDetail({ nc }: Readonly<NCDetailProps>) {
             )}
           </div>
 
-          {/* Auditor */}
+          {/* Responsável pela Investigação (real) */}
           <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-              Auditor(a) Principal
+              Responsável pela Investigação
             </h3>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
-                MT
+            {responsavelNome ? (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
+                  {initials(responsavelNome)}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-slate-900 truncate">{responsavelNome}</div>
+                  {nc.responsavel?.email && (
+                    <div className="text-[10px] text-slate-400 truncate">{nc.responsavel.email}</div>
+                  )}
+                </div>
               </div>
-              <div>
-                <div className="text-sm font-bold text-slate-900">Marcus Thorne</div>
-                <div className="text-[10px] text-slate-400">Auditor Líder</div>
+            ) : (
+              <div className="flex items-center gap-3 text-slate-400">
+                <UserCircle className="h-10 w-10" />
+                <span className="text-xs italic">Não designado</span>
+              </div>
+            )}
+          </div>
+
+          {/* Quem detectou */}
+          {nc.detector && (
+            <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
+              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+                Detectada por
+              </h3>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold">
+                  {initials(nc.detector.nome)}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-slate-900 truncate">{nc.detector.nome}</div>
+                  {nc.detector.email && (
+                    <div className="text-[10px] text-slate-400 truncate">{nc.detector.email}</div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Floating share btn */}
           <button
+            type="button"
             className="fixed bottom-8 right-8 w-14 h-14 bg-blue-700 hover:bg-blue-800 text-white rounded-full shadow-lg flex items-center justify-center transition-all active:scale-95 z-30"
             aria-label="Compartilhar NC"
           >
