@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import type { NCSeveridade, NCOrigem } from '@/types/database'
+import type { NCSeveridade, NCOrigem, NCTipoAcao } from '@/types/database'
 
 export interface CreateNCInput {
   titulo: string
@@ -13,6 +13,8 @@ export interface CreateNCInput {
   areaId: string
   responsavelId: string
   origem: NCOrigem
+  tipoAcao: NCTipoAcao
+  acaoImediata?: string
 }
 
 export interface ActionResult {
@@ -69,6 +71,8 @@ export async function createNC(input: CreateNCInput): Promise<ActionResult> {
       detectado_por:     user.id,
       requisito_violado: input.clausulaIso,
       status:            'registrada',
+      tipo_acao:         input.tipoAcao,
+      acao_imediata:     input.acaoImediata ?? null,
     })
     .select('id')
     .single()

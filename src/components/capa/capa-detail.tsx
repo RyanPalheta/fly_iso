@@ -1,13 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useTransition } from 'react'
-import { ArrowLeft, Edit3, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Edit3, ExternalLink, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { CincoPorquesEditor } from '@/components/capa/cinco-porques-editor'
 import { PlanoAcaoTable } from '@/components/capa/plano-acao-table'
-import { updateCapaStatus } from '@/lib/actions/capa'
 import type { CapaComRelacoes, AcaoComResponsavel } from '@/lib/queries/capas'
 import type { UsuarioBasico } from '@/lib/queries/areas'
 import type { CapaStatus } from '@/types/database'
@@ -45,15 +43,8 @@ function parsePortques(dados: unknown): Array<{ ordem: number; porque: string; r
 }
 
 export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>) {
-  const [, startTransition] = useTransition()
   const currentOrder = STATUS_ORDER[capa.status] ?? 0
   const porques = parsePortques(capa.causa_raiz_dados)
-
-  const advanceStatus = () => {
-    const next = STATUS_FLOW[currentOrder + 1]
-    if (!next) return
-    startTransition(async () => { await updateCapaStatus(capa.id, next.status) })
-  }
 
   return (
     <div className="space-y-6">
@@ -171,13 +162,13 @@ export function CapaDetail({ capa, acoes, usuarios }: Readonly<CapaDetailProps>)
             </div>
 
             {currentOrder < STATUS_FLOW.length - 1 && (
-              <button
-                type="button"
-                onClick={advanceStatus}
-                className="w-full mt-5 bg-gradient-to-br from-blue-700 to-blue-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm hover:opacity-90 transition-opacity"
-              >
-                Avançar para {STATUS_FLOW[currentOrder + 1]?.label}
-              </button>
+              <div className="mt-5 flex items-start gap-2 text-[11px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2.5 ring-1 ring-slate-100">
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
+                <p>
+                  O status avança <strong>automaticamente</strong> conforme as etapas
+                  são preenchidas (causa raiz, plano de ação, conclusão das ações).
+                </p>
+              </div>
             )}
           </div>
 

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, CheckCircle2, Clock, Circle, Loader2, XCircle } from 'lucide-react'
+import { Plus, CheckCircle2, Clock, Circle, Loader2, XCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createAcao, updateAcaoStatus } from '@/lib/actions/capa'
+import { effectiveAcaoStatus } from '@/lib/utils/acoes-utils'
 import type { AcaoComResponsavel } from '@/lib/queries/capas'
 import type { UsuarioBasico } from '@/lib/queries/areas'
 
@@ -14,20 +15,16 @@ interface PlanoAcaoTableProps {
 }
 
 const STATUS_ICON = {
-  pendente:    { icon: Circle,       cls: 'text-slate-400' },
-  em_andamento:{ icon: Clock,        cls: 'text-amber-500' },
-  concluida:   { icon: CheckCircle2, cls: 'text-emerald-500' },
-  cancelada:   { icon: XCircle,      cls: 'text-slate-300' },
+  pendente:    { icon: Circle,         cls: 'text-slate-400',   label: 'Pendente' },
+  em_andamento:{ icon: Clock,          cls: 'text-amber-500',   label: 'Em Execução' },
+  concluida:   { icon: CheckCircle2,   cls: 'text-emerald-500', label: 'Concluída' },
+  cancelada:   { icon: XCircle,        cls: 'text-slate-300',   label: 'Cancelada' },
+  atrasada:    { icon: AlertTriangle,  cls: 'text-red-500',     label: 'Atrasada' },
 }
 
 function fmt(iso: string | null): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function isVencida(prazo: string | null, status: string): boolean {
-  if (!prazo || status === 'concluida' || status === 'cancelada') return false
-  return prazo < new Date().toISOString().split('T')[0]
 }
 
 export function PlanoAcaoTable({ capaId, acoes, usuarios }: Readonly<PlanoAcaoTableProps>) {
@@ -80,17 +77,19 @@ export function PlanoAcaoTable({ capaId, acoes, usuarios }: Readonly<PlanoAcaoTa
       {/* Ações */}
       <div className="space-y-2">
         {acoes.map((acao) => {
-          const sm = STATUS_ICON[acao.status as keyof typeof STATUS_ICON] ?? STATUS_ICON.pendente
+          // Status efetivo = persistido OU 'atrasada' (calculado por prazo)
+          const statusEf = effectiveAcaoStatus(acao.status as 'pendente' | 'em_andamento' | 'concluida' | 'cancelada', acao.prazo)
+          const sm = STATUS_ICON[statusEf as keyof typeof STATUS_ICON] ?? STATUS_ICON.pendente
           const StatusIcon = sm.icon
-          const vencida = isVencida(acao.prazo, acao.status)
+          const isAtrasada = statusEf === 'atrasada'
 
           return (
             <div
               key={acao.id}
               className={cn(
                 'flex items-start gap-4 p-4 rounded-xl border transition-all',
-                acao.status === 'concluida' ? 'bg-emerald-50/30 border-emerald-100 opacity-70'
-                  : vencida ? 'bg-red-50/30 border-red-100'
+                statusEf === 'concluida' ? 'bg-emerald-50/30 border-emerald-100 opacity-70'
+                  : isAtrasada ? 'bg-red-50/40 border-red-200 ring-1 ring-red-100'
                   : 'bg-white border-slate-100 hover:border-slate-200'
               )}
             >
@@ -98,21 +97,34 @@ export function PlanoAcaoTable({ capaId, acoes, usuarios }: Readonly<PlanoAcaoTa
                 type="button"
                 onClick={() => handleStatusToggle(acao)}
                 className="mt-0.5 shrink-0"
-                title="Avançar status"
+                title={`${sm.label} — clique para avançar`}
               >
                 <StatusIcon className={cn('h-5 w-5', sm.cls)} />
               </button>
               <div className="flex-1 min-w-0">
-                <p className={cn('text-sm font-semibold', acao.status === 'concluida' ? 'line-through text-slate-400' : 'text-slate-900')}>
-                  {acao.descricao}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className={cn(
+                    'text-sm font-semibold',
+                    statusEf === 'concluida' ? 'line-through text-slate-400' : 'text-slate-900'
+                  )}>
+                    {acao.descricao}
+                  </p>
+                  {isAtrasada && (
+                    <span className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-red-100 text-red-700">
+                      Atrasada
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-3 mt-1">
                   <span className="text-[10px] text-slate-400 font-medium">
                     {acao.responsavel?.nome ?? '—'}
                   </span>
                   <span className="text-[10px] text-slate-300">·</span>
-                  <span className={cn('text-[10px] font-semibold', vencida ? 'text-red-600' : 'text-slate-400')}>
-                    {vencida ? '⚠ ' : ''}{fmt(acao.prazo)}
+                  <span className={cn(
+                    'text-[10px] font-semibold',
+                    isAtrasada ? 'text-red-600' : 'text-slate-400'
+                  )}>
+                    {fmt(acao.prazo)}
                   </span>
                 </div>
               </div>

@@ -5,11 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { UploadCloud, Sparkles, ChevronDown, AlertCircle } from 'lucide-react'
+import { UploadCloud, Sparkles, ChevronDown, AlertCircle, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createNC } from '@/lib/actions/nc'
 import type { AreaComUnidade, UsuarioBasico } from '@/lib/queries/areas'
-import type { NCOrigem } from '@/types/database'
+import type { NCOrigem, NCTipoAcao } from '@/types/database'
 
 const ncSchema = z.object({
   descricaoOcorrencia: z.string().min(20, 'Descreva com pelo menos 20 caracteres.'),
@@ -19,6 +19,8 @@ const ncSchema = z.object({
   origem:              z.string().min(1, 'Selecione a origem.'),
   areaId:              z.string().min(1, 'Selecione a área.'),
   responsavelId:       z.string().min(1, 'Selecione o responsável.'),
+  tipoAcao:            z.enum(['corretiva', 'preventiva']),
+  acaoImediata:        z.string().optional(),
 })
 
 type NCFormData = z.infer<typeof ncSchema>
@@ -68,22 +70,32 @@ export function NCForm({ areas, usuarios, usuarioAtualId }: Readonly<NCFormProps
       origem:        'processo',
       areaId:        areas[0]?.id ?? '',
       responsavelId: usuarioAtualId,
+      tipoAcao:      'corretiva',
+      acaoImediata:  '',
     },
   })
 
   const gravidade = watch('gravidade')
+  const origem    = watch('origem')
+  const tipoAcao  = watch('tipoAcao')
+
+  // Auto-sugestão: NCs originadas de auditoria são sempre corretivas (NC já ocorreu)
+  // NCs vindas de indicador podem ser preventivas (sinal antecipado)
+  const isOrigemAuditoria = origem === 'auditoria_interna' || origem === 'auditoria_externa' || origem === 'cliente'
 
   const onSubmit = async (data: NCFormData) => {
     setServerError(null)
     const result = await createNC({
-      titulo:        data.descricaoOcorrencia.slice(0, 80),
-      descricao:     data.descricaoOcorrencia,
+      titulo:         data.descricaoOcorrencia.slice(0, 80),
+      descricao:      data.descricaoOcorrencia,
       analiseImpacto: data.analiseImpacto,
-      clausulaIso:   data.clausulaIso,
-      gravidade:     data.gravidade,
-      origem:        data.origem as NCOrigem,
-      areaId:        data.areaId,
-      responsavelId: data.responsavelId,
+      clausulaIso:    data.clausulaIso,
+      gravidade:      data.gravidade,
+      origem:         data.origem as NCOrigem,
+      areaId:         data.areaId,
+      responsavelId:  data.responsavelId,
+      tipoAcao:       data.tipoAcao as NCTipoAcao,
+      acaoImediata:   data.acaoImediata?.trim() || undefined,
     })
 
     if (!result.ok) {
@@ -218,10 +230,104 @@ export function NCForm({ areas, usuarios, usuarioAtualId }: Readonly<NCFormProps
           </div>
         </div>
 
-        {/* 03. Evidências */}
+        {/* 03. Tipo de Ação + Ação Imediata */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5 space-y-5">
+          <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <span className="text-blue-700">03.</span> Tipo de Ação & Contenção
+          </label>
+
+          {/* Tipo de Ação */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              Tipo de Ação
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setValue('tipoAcao', 'corretiva')}
+                className={cn(
+                  'p-4 rounded-xl text-left transition-all',
+                  tipoAcao === 'corretiva'
+                    ? 'bg-orange-50 ring-2 ring-orange-300'
+                    : 'bg-slate-50 ring-1 ring-slate-200 hover:bg-slate-100'
+                )}
+              >
+                <p className={cn(
+                  'text-sm font-bold mb-0.5',
+                  tipoAcao === 'corretiva' ? 'text-orange-800' : 'text-slate-700'
+                )}>
+                  Corretiva
+                </p>
+                <p className={cn(
+                  'text-xs',
+                  tipoAcao === 'corretiva' ? 'text-orange-600' : 'text-slate-500'
+                )}>
+                  A NC já ocorreu — agir sobre a causa raiz.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setValue('tipoAcao', 'preventiva')}
+                className={cn(
+                  'p-4 rounded-xl text-left transition-all',
+                  tipoAcao === 'preventiva'
+                    ? 'bg-violet-50 ring-2 ring-violet-300'
+                    : 'bg-slate-50 ring-1 ring-slate-200 hover:bg-slate-100'
+                )}
+              >
+                <p className={cn(
+                  'text-sm font-bold mb-0.5',
+                  tipoAcao === 'preventiva' ? 'text-violet-800' : 'text-slate-700'
+                )}>
+                  Preventiva
+                </p>
+                <p className={cn(
+                  'text-xs',
+                  tipoAcao === 'preventiva' ? 'text-violet-600' : 'text-slate-500'
+                )}>
+                  Risco identificado — agir antes de ocorrer.
+                </p>
+              </button>
+            </div>
+
+            {isOrigemAuditoria && tipoAcao === 'preventiva' && (
+              <div className="mt-3 flex items-start gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 ring-1 ring-amber-200">
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <p>NCs vindas de auditoria ou cliente normalmente são <strong>corretivas</strong> (já ocorreram).</p>
+              </div>
+            )}
+          </div>
+
+          {/* Ação Imediata (opcional) */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label
+                htmlFor="acaoImediata"
+                className="text-xs font-semibold text-slate-500 uppercase tracking-wider"
+              >
+                Ação Imediata
+              </label>
+              <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
+            </div>
+            <p className="text-xs text-slate-500 mb-2">
+              Contenção: ação sobre o <em>efeito</em> do problema (não sobre a causa raiz).
+              Será registrada antes da análise da causa.
+            </p>
+            <textarea
+              id="acaoImediata"
+              rows={2}
+              placeholder="Ex: Isolar o lote afetado e suspender expedição até análise concluída."
+              className="w-full px-4 py-3 bg-slate-50 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 border-none focus:ring-2 focus:ring-blue-500/30 focus:outline-none resize-none"
+              {...register('acaoImediata')}
+            />
+          </div>
+        </div>
+
+        {/* 04. Evidências */}
         <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
           <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">
-            <span className="text-blue-700">03.</span> Evidências de Suporte
+            <span className="text-blue-700">04.</span> Evidências de Suporte
           </label>
           <div className="border-2 border-dashed border-slate-200 rounded-xl p-10 text-center hover:bg-slate-50/50 transition-colors">
             <div className="w-12 h-12 bg-blue-50 text-blue-700 rounded-xl mx-auto flex items-center justify-center mb-3">

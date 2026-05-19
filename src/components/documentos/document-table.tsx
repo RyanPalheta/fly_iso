@@ -20,6 +20,7 @@ const TIPO_META: Record<string, { label: string; cls: string }> = {
 const TIPO_OPTIONS = ['Todos', 'Manual', 'Procedimento', 'Instrucao', 'Formulario', 'Politica'] as const
 const STATUS_OPTIONS = [
   { value: 'Todos',      label: 'Status' },
+  { value: 'vigente',    label: 'Vigente' },
   { value: 'aprovado',   label: 'Aprovado' },
   { value: 'em_revisao', label: 'Em Revisão' },
   { value: 'rascunho',   label: 'Rascunho' },

@@ -134,6 +134,41 @@ export function NCDetail({ nc }: Readonly<NCDetailProps>) {
             </div>
           </div>
 
+          {/* Tipo de Ação + Ação Imediata */}
+          {((nc as any).tipo_acao || (nc as any).acao_imediata) && (
+            <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-900">Classificação da Ação</h2>
+                {(nc as any).tipo_acao && (
+                  <span className={cn(
+                    'px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider',
+                    (nc as any).tipo_acao === 'corretiva'
+                      ? 'bg-orange-100 text-orange-700'
+                      : 'bg-violet-100 text-violet-700'
+                  )}>
+                    {(nc as any).tipo_acao === 'corretiva' ? 'Corretiva' : 'Preventiva'}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {(nc as any).tipo_acao === 'corretiva'
+                  ? 'NC já ocorreu — necessária ação sobre a causa raiz.'
+                  : 'Risco identificado — necessária ação antes que ocorra.'}
+              </p>
+
+              {(nc as any).acao_imediata && (
+                <div className="bg-amber-50 rounded-xl p-4 ring-1 ring-amber-200">
+                  <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-1.5">
+                    Ação Imediata (Contenção)
+                  </p>
+                  <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    {(nc as any).acao_imediata}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ISO clause violated */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 ring-1 ring-blue-200/40">
             <div className="flex items-start gap-4">

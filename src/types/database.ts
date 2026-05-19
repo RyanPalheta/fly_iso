@@ -8,14 +8,20 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 // ── Enums lógicos (armazenados como VARCHAR) ──
 export type DocumentoTipo = 'Manual' | 'Procedimento' | 'Instrucao' | 'Formulario' | 'Politica' | 'Registro'
-export type DocumentoStatus = 'rascunho' | 'em_revisao' | 'aprovado' | 'obsoleto'
+/** ISO 9001 — Fluxo de status do documento:
+ *  rascunho → em_revisao → aprovado → vigente → obsoleto */
+export type DocumentoStatus = 'rascunho' | 'em_revisao' | 'aprovado' | 'vigente' | 'obsoleto'
 export type VersaoStatus = 'pendente' | 'em_revisao' | 'aprovado' | 'rejeitado'
 export type NCSeveridade = 'menor' | 'maior' | 'critica'
 export type NCOrigem = 'auditoria_interna' | 'auditoria_externa' | 'cliente' | 'processo' | 'indicador'
 export type NCStatus = 'registrada' | 'em_analise' | 'em_acao' | 'verificacao' | 'encerrada'
+/** Tipo de ação para NC (definido no registro inicial — req. auditor) */
+export type NCTipoAcao = 'corretiva' | 'preventiva'
 export type CapaTipo = 'corretiva' | 'preventiva'
 export type CapaStatus = 'aberta' | 'em_investigacao' | 'plano_definido' | 'em_execucao' | 'verificacao' | 'encerrada' | 'reaberta'
+/** Status real persistido + 'atrasada' (calculado em runtime quando prazo vencido) */
 export type AcaoStatus = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada'
+export type AcaoStatusEfetivo = AcaoStatus | 'atrasada'
 export type PerfilNome = 'Admin' | 'Qualidade' | 'Lider' | 'Usuario' | 'Auditor'
 
 // ── Matriz de permissões (perfis.permissoes JSONB) ──
@@ -95,6 +101,7 @@ export interface Database {
           detectado_por: string | null; responsavel_id: string | null
           severidade: NCSeveridade | null; origem: NCOrigem | null; status: NCStatus
           evidencia_urls: Json; requisito_violado: string | null
+          tipo_acao: NCTipoAcao; acao_imediata: string | null
           created_at: string; updated_at: string; encerrada_em: string | null
         }
         Insert: {
@@ -103,6 +110,7 @@ export interface Database {
           detectado_por?: string | null; responsavel_id?: string | null
           severidade?: NCSeveridade | null; origem?: NCOrigem | null; status?: NCStatus
           evidencia_urls?: Json; requisito_violado?: string | null
+          tipo_acao?: NCTipoAcao; acao_imediata?: string | null
           encerrada_em?: string | null
         }
         Update: Partial<Database['public']['Tables']['nao_conformidades']['Insert']>
