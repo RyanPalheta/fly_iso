@@ -15,6 +15,7 @@ export interface CreateNCInput {
   origem: NCOrigem
   tipoAcao: NCTipoAcao
   acaoImediata?: string
+  evidenciaUrls?: Array<{ url: string; nome: string }>
 }
 
 export interface ActionResult {
@@ -73,6 +74,7 @@ export async function createNC(input: CreateNCInput): Promise<ActionResult> {
       status:            'registrada',
       tipo_acao:         input.tipoAcao,
       acao_imediata:     input.acaoImediata ?? null,
+      evidencia_urls:    input.evidenciaUrls ?? [],
     })
     .select('id')
     .single()

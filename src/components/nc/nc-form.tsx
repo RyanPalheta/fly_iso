@@ -5,11 +5,17 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { UploadCloud, Sparkles, ChevronDown, AlertCircle, Info } from 'lucide-react'
+import { Sparkles, ChevronDown, AlertCircle, Info, X, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createNC } from '@/lib/actions/nc'
+import { FileUpload } from '@/components/shared/file-upload'
 import type { AreaComUnidade, UsuarioBasico } from '@/lib/queries/areas'
 import type { NCOrigem, NCTipoAcao } from '@/types/database'
+
+interface EvidenciaFile {
+  url:  string
+  nome: string
+}
 
 const ncSchema = z.object({
   descricaoOcorrencia: z.string().min(20, 'Descreva com pelo menos 20 caracteres.'),
@@ -56,6 +62,7 @@ interface NCFormProps {
 export function NCForm({ areas, usuarios, usuarioAtualId }: Readonly<NCFormProps>) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [evidencias, setEvidencias]   = useState<EvidenciaFile[]>([])
 
   const {
     register,
@@ -96,6 +103,7 @@ export function NCForm({ areas, usuarios, usuarioAtualId }: Readonly<NCFormProps
       responsavelId:  data.responsavelId,
       tipoAcao:       data.tipoAcao as NCTipoAcao,
       acaoImediata:   data.acaoImediata?.trim() || undefined,
+      evidenciaUrls:  evidencias,
     })
 
     if (!result.ok) {
@@ -325,25 +333,56 @@ export function NCForm({ areas, usuarios, usuarioAtualId }: Readonly<NCFormProps
         </div>
 
         {/* 04. Evidências */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5">
-          <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">
+        <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-black/5 space-y-4">
+          <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
             <span className="text-blue-700">04.</span> Evidências de Suporte
           </label>
-          <div className="border-2 border-dashed border-slate-200 rounded-xl p-10 text-center hover:bg-slate-50/50 transition-colors">
-            <div className="w-12 h-12 bg-blue-50 text-blue-700 rounded-xl mx-auto flex items-center justify-center mb-3">
-              <UploadCloud className="h-6 w-6" />
-            </div>
-            <p className="text-sm font-semibold text-slate-700">Arraste e solte arquivos de evidência</p>
-            <p className="text-xs text-slate-400 mt-1 mb-4">
-              Fotografias, logs de sensores ou relatórios em PDF (máx. 10MB)
-            </p>
-            <button
-              type="button"
-              className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Procurar Arquivos
-            </button>
-          </div>
+          <p className="text-xs text-slate-500">
+            Fotografias, logs, planilhas ou relatórios em PDF que comprovem a não conformidade.
+            Máximo 10 MB por arquivo.
+          </p>
+
+          {/* Lista de evidências já enviadas */}
+          {evidencias.length > 0 && (
+            <ul className="space-y-2">
+              {evidencias.map((ev, i) => (
+                <li
+                  key={ev.url + i}
+                  className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5"
+                >
+                  <FileText className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span className="text-xs font-semibold text-slate-700 flex-1 truncate">{ev.nome}</span>
+                  <a
+                    href={ev.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-bold text-emerald-700 hover:underline uppercase tracking-wider"
+                  >
+                    Abrir
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setEvidencias((prev) => prev.filter((_, j) => j !== i))}
+                    className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded"
+                    aria-label="Remover"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Upload zone */}
+          <FileUpload
+            bucket="evidencias"
+            path={`nc/${Date.now()}-`}
+            accept="image/*,application/pdf,.xlsx,.xls,.csv"
+            maxSizeMB={10}
+            label="Arraste um arquivo aqui ou clique para selecionar"
+            onUpload={(url, nome) => setEvidencias((prev) => [...prev, { url, nome }])}
+            onError={(msg) => setServerError(msg)}
+          />
         </div>
 
         {/* Actions */}
