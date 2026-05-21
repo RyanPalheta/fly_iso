@@ -65,6 +65,23 @@ export async function getVersoes(documentoId: string) {
   return data ?? []
 }
 
+/** Lista documentos VIGENTES (aprovados ou vigentes) — para vincular em treinamentos internos. */
+export async function listDocumentosVigentes() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createServiceClient() as any
+  const { data, error } = await sb
+    .from('documentos')
+    .select('id, codigo, titulo, tipo, revisao_atual, status')
+    .in('status', ['vigente', 'aprovado'])
+    .order('codigo')
+
+  if (error) { console.error('[listDocumentosVigentes]', error.message); return [] }
+  return (data ?? []) as Array<{
+    id: string; codigo: string; titulo: string; tipo: string | null
+    revisao_atual: number; status: string
+  }>
+}
+
 /** Busca por código (ex: "DOC-001"). */
 export async function getDocumentoByCodigo(codigo: string) {
   const sb = await createClient()

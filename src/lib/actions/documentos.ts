@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { notificarRetreinamento } from '@/lib/actions/treinamentos'
 import type { DocumentoStatus, DocumentoTipo } from '@/types/database'
 
 export interface ActionResult {
@@ -186,6 +187,15 @@ export async function createVersao(input: CreateVersaoInput): Promise<ActionResu
     .eq('id', input.documentoId)
 
   if (docErr) return { ok: false, error: docErr.message }
+
+  // ── Trigger de retreinamento (auditor — Fase C) ──
+  // Notifica todos os participantes de treinamentos internos vinculados a este doc
+  try {
+    await notificarRetreinamento(input.documentoId, proxima)
+  } catch (e) {
+    console.error('[createVersao] notificarRetreinamento falhou:', e)
+    // Não bloqueia o fluxo principal — só loga
+  }
 
   revalidatePath(`/documentos/${input.documentoId}`)
   revalidatePath('/documentos')
