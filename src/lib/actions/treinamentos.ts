@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import type { TreinamentoCategoria, TreinamentoTurno } from '@/types/database'
+import type { TreinamentoCategoria, TreinamentoTurno, LntPrioridade, LntStatus } from '@/types/database'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function sbService(): Promise<any> {
@@ -210,6 +210,69 @@ export async function registrarAvaliacaoEficacia(
 
   if (error) return { ok: false, error: error.message }
   revalidatePath(`/treinamentos/${input.treinamentoId}`)
+  return { ok: true }
+}
+
+// ── LNT (Levantamento de Necessidades de Treinamento) ──────────────────────
+
+export interface CreateLntInput {
+  areaId?:               string
+  ano:                   number
+  treinamentoNome:       string
+  descricao?:            string
+  justificativa?:        string
+  prioridade:            LntPrioridade
+  qtdPessoas:            number
+  cargaHorariaEstimada?: number
+}
+
+export async function createLnt(input: CreateLntInput): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  if (!input.treinamentoNome?.trim()) return { ok: false, error: 'Nome do treinamento obrigatório.' }
+  if (!input.ano || input.ano < 2000 || input.ano > 2100) return { ok: false, error: 'Ano inválido.' }
+  if (input.qtdPessoas < 1) return { ok: false, error: 'Quantidade de pessoas deve ser >= 1.' }
+
+  const sb = await sbService()
+  const { data, error } = await sb
+    .from('treinamento_lnt')
+    .insert({
+      area_id:                 input.areaId || null,
+      ano:                     input.ano,
+      treinamento_nome:        input.treinamentoNome.trim(),
+      descricao:               input.descricao?.trim() || null,
+      justificativa:           input.justificativa?.trim() || null,
+      prioridade:              input.prioridade,
+      qtd_pessoas:             input.qtdPessoas,
+      carga_horaria_estimada:  input.cargaHorariaEstimada || null,
+      status:                  'identificada',
+      criado_por:              user.id,
+    })
+    .select('id')
+    .single()
+
+  if (error) return { ok: false, error: error.message }
+  revalidatePath('/treinamentos/lnt')
+  revalidatePath('/treinamentos/plano-anual')
+  return { ok: true, id: (data as { id: string }).id }
+}
+
+export async function updateLntStatus(id: string, status: LntStatus): Promise<ActionResult> {
+  const userSb = await createClient()
+  const { data: { user } } = await userSb.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  const sb = await sbService()
+  const { error } = await sb
+    .from('treinamento_lnt')
+    .update({ status })
+    .eq('id', id)
+
+  if (error) return { ok: false, error: error.message }
+  revalidatePath('/treinamentos/lnt')
+  revalidatePath('/treinamentos/plano-anual')
   return { ok: true }
 }
 

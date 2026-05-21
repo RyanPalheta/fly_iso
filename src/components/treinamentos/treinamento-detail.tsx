@@ -1,10 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useTransition } from 'react'
-import { ArrowLeft, CheckCircle2, Clock, XCircle, Users2, FileText } from 'lucide-react'
+import { useState, useTransition } from 'react'
+import {
+  ArrowLeft, CheckCircle2, Clock, XCircle, Users2, FileText,
+  ThumbsUp, ThumbsDown, AlertCircle, Loader2, Check, Award,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { updateParticipanteStatus, registrarAceiteDigital } from '@/lib/actions/treinamentos'
+import { updateParticipanteStatus, registrarAceiteDigital, registrarAvaliacaoEficacia } from '@/lib/actions/treinamentos'
 import type { TreinamentoComRelacoes } from '@/lib/queries/treinamentos'
 
 interface Props { treinamento: TreinamentoComRelacoes }
@@ -74,6 +77,136 @@ function ParticipanteRow({
         >
           Aceite digital
         </button>
+      )}
+    </div>
+  )
+}
+
+// ── Avaliação de Eficácia ──────────────────────────────────────────────────
+function AvaliacaoEficaciaPanel({ treinamentoId }: Readonly<{ treinamentoId: string }>) {
+  const [open, setOpen]           = useState(false)
+  const [eficaz, setEficaz]       = useState<boolean | null>(null)
+  const [obs, setObs]             = useState('')
+  const [error, setError]         = useState<string | null>(null)
+  const [done, setDone]           = useState(false)
+  const [isPending, setIsPending] = useState(false)
+
+  const handleSubmit = async () => {
+    if (eficaz === null) { setError('Selecione se o treinamento foi eficaz.'); return }
+    if (!obs.trim())     { setError('Observação é obrigatória (req. auditor).'); return }
+    if (!eficaz && obs.trim().length < 20) {
+      setError('Quando ineficaz, justifique com pelo menos 20 caracteres.'); return
+    }
+    setIsPending(true)
+    const result = await registrarAvaliacaoEficacia({ treinamentoId, eficaz, observacao: obs })
+    setIsPending(false)
+    if (!result.ok) { setError(result.error ?? 'Erro.'); return }
+    setDone(true)
+  }
+
+  if (done) {
+    return (
+      <div className="bg-emerald-50 rounded-2xl p-5 ring-1 ring-emerald-200 flex items-center gap-3">
+        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+        <div>
+          <p className="text-sm font-bold text-emerald-800">Avaliação de eficácia registrada.</p>
+          <p className="text-xs text-emerald-600 mt-0.5">Obrigado — isso atende ao requisito §7.2 da ISO 9001.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const inputCls = 'w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white'
+
+  return (
+    <div className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center">
+            <Award className="h-4 w-4" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-bold text-slate-900">Avaliação de Eficácia</p>
+            <p className="text-[11px] text-slate-500">Obrigatória — ISO 9001 §7.2</p>
+          </div>
+        </div>
+        <span className="text-xs font-bold text-violet-700 bg-violet-100 px-2.5 py-1 rounded-full">
+          {open ? 'Fechar' : 'Registrar'}
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-slate-100 p-5 space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3">
+              <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+              O treinamento atingiu os objetivos pretendidos?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button"
+                onClick={() => { setEficaz(true); setError(null) }}
+                className={cn(
+                  'flex items-center justify-center gap-2 p-3.5 rounded-xl font-bold text-sm transition-all',
+                  eficaz === true
+                    ? 'bg-emerald-50 ring-2 ring-emerald-300 text-emerald-800'
+                    : 'bg-slate-50 ring-1 ring-slate-200 text-slate-600 hover:bg-slate-100'
+                )}
+              >
+                <ThumbsUp className="h-4 w-4" /> Sim — Eficaz
+              </button>
+              <button type="button"
+                onClick={() => { setEficaz(false); setError(null) }}
+                className={cn(
+                  'flex items-center justify-center gap-2 p-3.5 rounded-xl font-bold text-sm transition-all',
+                  eficaz === false
+                    ? 'bg-red-50 ring-2 ring-red-300 text-red-800'
+                    : 'bg-slate-50 ring-1 ring-slate-200 text-slate-600 hover:bg-slate-100'
+                )}
+              >
+                <ThumbsDown className="h-4 w-4" /> Não — Ineficaz
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+              Observação / Evidência <span className="text-red-500 normal-case">*</span>
+              {!eficaz && eficaz !== null && (
+                <span className="ml-2 normal-case text-red-600 font-normal">(mínimo 20 caracteres quando ineficaz)</span>
+              )}
+            </label>
+            <textarea
+              rows={3}
+              value={obs}
+              onChange={(e) => setObs(e.target.value)}
+              placeholder={eficaz ? 'Descreva como o treinamento foi eficaz (indicadores, avaliação prática, etc.)' : 'Descreva por que o treinamento não atingiu os objetivos e quais ações serão tomadas.'}
+              className={`${inputCls} resize-none`}
+            />
+            <p className="text-[10px] text-slate-400 mt-1 text-right">{obs.length} caracteres</p>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => { setOpen(false); setError(null) }}
+              className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">
+              Cancelar
+            </button>
+            <button type="button" onClick={handleSubmit} disabled={isPending}
+              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-5 py-2 rounded-xl text-sm font-bold disabled:opacity-50">
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Registrar Avaliação
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -154,6 +287,11 @@ export function TreinamentoDetail({ treinamento: t }: Readonly<Props>) {
               </div>
             )}
           </div>
+
+          {/* Avaliação de Eficácia — aparece quando o treinamento está realizado */}
+          {t.status === 'realizado' && (
+            <AvaliacaoEficaciaPanel treinamentoId={t.id} />
+          )}
         </section>
 
         {/* Sidebar */}

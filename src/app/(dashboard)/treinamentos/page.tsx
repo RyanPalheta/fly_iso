@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Users, ExternalLink, ChevronRight } from 'lucide-react'
+import { Users, ExternalLink, ChevronRight, ListChecks, CalendarDays, Plus } from 'lucide-react'
 import { TreinamentoKpiCards } from '@/components/treinamentos/treinamento-kpi-cards'
 import { TreinamentoTable } from '@/components/treinamentos/treinamento-table'
 import { listTreinamentos, getTreinamentoStats } from '@/lib/queries/treinamentos'
@@ -46,6 +46,26 @@ export default async function TreinamentosPage({ searchParams }: Props) {
           <p className="text-sm text-slate-500 mt-1">
             Gerencie capacitação interna (documentos do SGQ) e externa (cursos & certificações)
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/treinamentos/lnt"
+            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-xl text-sm font-semibold ring-1 ring-slate-200 transition-colors"
+          >
+            <ListChecks className="h-4 w-4" /> LNT
+          </Link>
+          <Link
+            href="/treinamentos/plano-anual"
+            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-xl text-sm font-semibold ring-1 ring-slate-200 transition-colors"
+          >
+            <CalendarDays className="h-4 w-4" /> Plano Anual
+          </Link>
+          <Link
+            href="/treinamentos/novo"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Novo Treinamento
+          </Link>
         </div>
       </div>
 
