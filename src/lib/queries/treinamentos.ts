@@ -1,5 +1,6 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
+import type { TreinamentoCategoria } from '@/types/database'
 
 export type TreinamentoRow = {
   id: string
@@ -13,6 +14,13 @@ export type TreinamentoRow = {
   tipo: string
   status: string
   evidencia_url: string | null
+  // Fase C — novos campos
+  categoria:          TreinamentoCategoria
+  revisao_doc:        number | null
+  entidade_promotora: string | null
+  carga_horaria:      number | null
+  mes_planejado:      string | null
+  custo:              number | null
   created_at: string
   updated_at: string
 }
@@ -25,6 +33,11 @@ export type ParticipanteRow = {
   certificado_url: string | null
   aceite_digital: boolean
   aceite_em: string | null
+  // Fase C — novos campos
+  nome_snapshot: string | null
+  matricula:     string | null
+  setor:         string | null
+  turno:         string | null
   created_at: string
 }
 
@@ -42,12 +55,19 @@ export type TreinamentoStats = {
   realizados: number
   cancelados: number
   taxa_conclusao: number   // % participantes com status concluido
+  internos: number
+  externos: number
 }
 
-export async function listTreinamentos(): Promise<TreinamentoComRelacoes[]> {
+interface ListOpts {
+  categoria?: TreinamentoCategoria
+}
+
+export async function listTreinamentos(opts: ListOpts = {}): Promise<TreinamentoComRelacoes[]> {
   const sb = await createClient()
 
-  const { data, error } = await (sb as any)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let q = (sb as any)
     .from('treinamentos')
     .select(`
       *,
@@ -60,6 +80,9 @@ export async function listTreinamentos(): Promise<TreinamentoComRelacoes[]> {
     `)
     .order('data_treinamento', { ascending: false })
 
+  if (opts.categoria) q = q.eq('categoria', opts.categoria)
+
+  const { data, error } = await q
   if (error) { console.error('listTreinamentos', error); return [] }
   return (data ?? []) as TreinamentoComRelacoes[]
 }
@@ -67,6 +90,7 @@ export async function listTreinamentos(): Promise<TreinamentoComRelacoes[]> {
 export async function getTreinamento(id: string): Promise<TreinamentoComRelacoes | null> {
   const sb = await createClient()
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (sb as any)
     .from('treinamentos')
     .select(`
@@ -85,28 +109,32 @@ export async function getTreinamento(id: string): Promise<TreinamentoComRelacoes
   return data as TreinamentoComRelacoes
 }
 
-export async function getTreinamentoStats(): Promise<TreinamentoStats> {
+export async function getTreinamentoStats(opts: ListOpts = {}): Promise<TreinamentoStats> {
   const sb = await createClient()
 
-  const { data } = await (sb as any)
-    .from('treinamentos')
-    .select('status')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let q = (sb as any).from('treinamentos').select('status, categoria')
+  if (opts.categoria) q = q.eq('categoria', opts.categoria)
 
-  const rows = (data ?? []) as Array<{ status: string }>
-  const total    = rows.length
-  const planejados  = rows.filter((r) => r.status === 'planejado').length
-  const realizados  = rows.filter((r) => r.status === 'realizado').length
-  const cancelados  = rows.filter((r) => r.status === 'cancelado').length
+  const { data } = await q
+  const rows = (data ?? []) as Array<{ status: string; categoria: TreinamentoCategoria }>
+  const total      = rows.length
+  const planejados = rows.filter((r) => r.status === 'planejado').length
+  const realizados = rows.filter((r) => r.status === 'realizado').length
+  const cancelados = rows.filter((r) => r.status === 'cancelado').length
+  const internos   = rows.filter((r) => r.categoria === 'interno').length
+  const externos   = rows.filter((r) => r.categoria === 'externo').length
 
-  // Taxa de conclusão de participantes
+  // Taxa de conclusão dos participantes (filtrada se categoria informada)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: partic } = await (sb as any)
     .from('treinamento_participantes')
     .select('status')
 
   const ps = (partic ?? []) as Array<{ status: string }>
-  const totalP   = ps.length
+  const totalP      = ps.length
   const concluidosP = ps.filter((p) => p.status === 'concluido').length
   const taxaConclusao = totalP > 0 ? Math.round((concluidosP / totalP) * 100) : 0
 
-  return { total, planejados, realizados, cancelados, taxa_conclusao: taxaConclusao }
+  return { total, planejados, realizados, cancelados, taxa_conclusao: taxaConclusao, internos, externos }
 }

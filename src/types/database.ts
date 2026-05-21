@@ -22,6 +22,12 @@ export type CapaStatus = 'aberta' | 'em_investigacao' | 'plano_definido' | 'em_e
 /** Status real persistido + 'atrasada' (calculado em runtime quando prazo vencido) */
 export type AcaoStatus = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada'
 export type AcaoStatusEfetivo = AcaoStatus | 'atrasada'
+
+// ── Treinamentos (Fase C) ──
+export type TreinamentoCategoria = 'interno' | 'externo'
+export type TreinamentoTurno = 'manha' | 'tarde' | 'noite' | 'integral'
+export type LntPrioridade = 'alta' | 'media' | 'baixa'
+export type LntStatus = 'identificada' | 'aprovada' | 'planejada' | 'em_execucao' | 'concluida' | 'cancelada'
 export type PerfilNome = 'Admin' | 'Qualidade' | 'Lider' | 'Usuario' | 'Auditor'
 
 // ── Matriz de permissões (perfis.permissoes JSONB) ──
