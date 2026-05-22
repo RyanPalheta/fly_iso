@@ -262,11 +262,11 @@ INSERT INTO treinamento_lnt (
 ON CONFLICT DO NOTHING;
 
 -- ─── Resumo ────────────────────────────────────────────────────────────────────
-SELECT 'treinamentos'       AS tabela, count(*)::int AS total FROM treinamentos                  WHERE id LIKE 'e0000000%'
+SELECT 'treinamentos'       AS tabela, count(*)::int AS total FROM treinamentos                  WHERE id::text LIKE 'e0000000%'
 UNION ALL
-SELECT 'participantes',                count(*)::int          FROM treinamento_participantes tp   JOIN treinamentos t ON t.id = tp.treinamento_id WHERE t.id LIKE 'e0000000%'
+SELECT 'participantes',                count(*)::int          FROM treinamento_participantes tp   JOIN treinamentos t ON t.id = tp.treinamento_id WHERE t.id::text LIKE 'e0000000%'
 UNION ALL
-SELECT 'avaliacoes_eficacia',          count(*)::int          FROM treinamento_avaliacao_eficacia JOIN treinamentos t ON t.id = treinamento_id    WHERE t.id LIKE 'e0000000%'
+SELECT 'avaliacoes_eficacia',          count(*)::int          FROM treinamento_avaliacao_eficacia tae JOIN treinamentos t ON t.id = tae.treinamento_id WHERE t.id::text LIKE 'e0000000%'
 UNION ALL
 SELECT 'lnt_2026',                     count(*)::int          FROM treinamento_lnt               WHERE ano = 2026
 UNION ALL
