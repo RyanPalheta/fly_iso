@@ -30,6 +30,21 @@ export type LntPrioridade = 'alta' | 'media' | 'baixa'
 export type LntStatus = 'identificada' | 'aprovada' | 'planejada' | 'em_execucao' | 'concluida' | 'cancelada'
 export type PerfilNome = 'Admin' | 'Qualidade' | 'Lider' | 'Usuario' | 'Auditor'
 
+// ── Registros configuráveis (Fase D) ──
+export type RegistroCampoTipo =
+  | 'text' | 'textarea' | 'number' | 'date' | 'boolean' | 'select' | 'files' | 'user'
+
+export interface RegistroCampoDef {
+  id:        string                     // chave usada em registros.dados
+  label:     string
+  type:      RegistroCampoTipo
+  required:  boolean
+  options?:  string[]                   // só para type=select
+  help?:     string                     // texto de ajuda opcional
+}
+
+export type RegistroDescarteAcao = 'arquivar' | 'descartar' | 'reter_indefinidamente'
+
 // ── Matriz de permissões (perfis.permissoes JSONB) ──
 export type Modulo =
   | 'documentos' | 'treinamentos' | 'nc' | 'capa' | 'indicadores'

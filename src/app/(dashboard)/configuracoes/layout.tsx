@@ -10,15 +10,17 @@ import {
   Activity,
   UserCircle,
   Bell,
+  FileBox,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { label: 'Organização',     href: '/configuracoes/organizacao',  icon: Building2  },
-  { label: 'Usuários & Perfis', href: '/configuracoes/usuarios',   icon: Users2     },
-  { label: 'Importação',      href: '/configuracoes/importacao',   icon: Upload     },
-  { label: 'Audit Log',       href: '/configuracoes/audit-log',    icon: Activity   },
-  { label: 'Meu Perfil',      href: '/configuracoes/perfil',       icon: UserCircle },
-  { label: 'Notificações',    href: '/configuracoes/notificacoes', icon: Bell       },
+  { label: 'Organização',       href: '/configuracoes/organizacao',       icon: Building2  },
+  { label: 'Usuários & Perfis', href: '/configuracoes/usuarios',          icon: Users2     },
+  { label: 'Tipos de Registro', href: '/configuracoes/registros-tipos',   icon: FileBox    },
+  { label: 'Importação',        href: '/configuracoes/importacao',        icon: Upload     },
+  { label: 'Audit Log',         href: '/configuracoes/audit-log',         icon: Activity   },
+  { label: 'Meu Perfil',        href: '/configuracoes/perfil',            icon: UserCircle },
+  { label: 'Notificações',      href: '/configuracoes/notificacoes',      icon: Bell       },
 ]
 
 export default function ConfiguracoesLayout({ children }: { children: React.ReactNode }) {
