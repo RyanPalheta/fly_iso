@@ -2,6 +2,9 @@
 -- SEED: Registros Demo (Fase D)
 -- Cria registros de exemplo usando os 3 tipos padrão criados pela migration 010.
 -- Pré-requisito: rodar 010_registros_configuraveis.sql ANTES deste seed.
+--
+-- O seed é idempotente: DELETA primeiro os registros com os códigos demo
+-- (se existirem) e depois INSERE de novo. Pode rodar várias vezes.
 -- =============================================================================
 
 -- Garante áreas (reusa do seed de treinamentos se já rodou)
@@ -16,7 +19,17 @@ INSERT INTO areas (id, nome, unidade_id) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- Usamos um DO block para resolver os IDs dos tipos por código
+-- Limpa registros demo anteriores para tornar o seed idempotente
+-- =============================================================================
+DELETE FROM registros WHERE codigo IN (
+  'INSP_RECEB-2026-0001', 'INSP_RECEB-2026-0002', 'INSP_RECEB-2026-0003',
+  'INSP_RECEB-2026-0004', 'INSP_RECEB-2019-0042',
+  'CALIB-2026-0001', 'CALIB-2026-0002', 'CALIB-2026-0003',
+  'REUNIAO-2026-0001', 'REUNIAO-2026-0002', 'REUNIAO-2026-0003'
+);
+
+-- =============================================================================
+-- INSERTs
 -- =============================================================================
 DO $$
 DECLARE
@@ -32,7 +45,7 @@ BEGIN
   SELECT id INTO v_reuniao_id FROM registro_tipos WHERE codigo = 'REUNIAO';
 
   IF v_insp_id IS NULL OR v_calib_id IS NULL OR v_reuniao_id IS NULL THEN
-    RAISE EXCEPTION 'Tipos padrão não encontrados. Rode a migration 010_registros_configuraveis.sql primeiro.';
+    RAISE EXCEPTION 'Tipos padrão não encontrados. Rode 010_registros_configuraveis.sql primeiro.';
   END IF;
 
   -- ─── 1. Inspeções de Recebimento (5) ──────────────────────────────────────
@@ -101,7 +114,7 @@ BEGIN
       '2026-05-02', '2031-05-02', 'ativo'
     ),
     (
-      -- Registro antigo com prazo vencido (de 2019)
+      -- Prazo vencido (de 2019) - para testar o banner de vencidos
       v_insp_id, 'INSP_RECEB-2019-0042',
       'Recebimento histórico — exemplo de prazo vencido',
       jsonb_build_object(
@@ -110,13 +123,12 @@ BEGIN
         'lote',        'L-OLD-2019',
         'quantidade',  50,
         'conforme',    true,
-        'observacoes', 'Registro de 2019 — prazo de retenção (5 anos) vencido em 2024. Demonstra alerta de descarte.',
+        'observacoes', 'Registro de 2019 — prazo de retenção (5 anos) vencido em 2024.',
         'anexos',      jsonb_build_array()
       ),
       v_qualidade,
       '2019-06-10', '2024-06-10', 'ativo'
-    )
-  ON CONFLICT (codigo) DO NOTHING;
+    );
 
   -- ─── 2. Calibrações (3) ────────────────────────────────────────────────────
   INSERT INTO registros (
@@ -167,8 +179,7 @@ BEGIN
       ),
       v_producao,
       '2026-04-22', '2036-04-22', 'ativo'
-    )
-  ON CONFLICT (codigo) DO NOTHING;
+    );
 
   -- ─── 3. Atas de Reunião (3) ────────────────────────────────────────────────
   INSERT INTO registros (
@@ -219,8 +230,7 @@ BEGIN
       ),
       v_manut,
       '2026-05-05', '2031-05-05', 'ativo'
-    )
-  ON CONFLICT (codigo) DO NOTHING;
+    );
 END $$;
 
 -- ─── Resumo ────────────────────────────────────────────────────────────────────
