@@ -1,5 +1,5 @@
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import type { RegistroTipoRow } from '@/lib/queries/registro-tipos'
 
 export type RegistroRow = {
@@ -42,7 +42,9 @@ interface ListOpts {
  * após migration).
  */
 export async function listRegistros(opts: ListOpts = {}): Promise<RegistroComRelacoes[]> {
-  const sb = await createClient()
+  // Service client: bypass RLS — autorização é feita na camada de UI / actions.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createServiceClient() as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q = (sb as any).from('registros').select('*').order('created_at', { ascending: false })
 
@@ -62,7 +64,9 @@ export async function listRegistros(opts: ListOpts = {}): Promise<RegistroComRel
 }
 
 export async function getRegistro(id: string): Promise<RegistroComRelacoes | null> {
-  const sb = await createClient()
+  // Service client: bypass RLS — autorização é feita na camada de UI / actions.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createServiceClient() as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (sb as any)
     .from('registros').select('*').eq('id', id).maybeSingle()
@@ -123,7 +127,9 @@ export type RegistroStats = {
 }
 
 export async function getRegistroStats(): Promise<RegistroStats> {
-  const sb = await createClient()
+  // Service client: bypass RLS — autorização é feita na camada de UI / actions.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createServiceClient() as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (sb as any)
     .from('registros').select('status, prazo_descarte, arquivado_em')
