@@ -128,6 +128,7 @@ BEGIN
     'ISO 9001:2015 §7.1 até §7.5',
     '2026-02-10', '2026-02-12', v_qualidade, v_unidade_sp,
     jsonb_build_array(v_chk_iso::text),
+    'concluida',
     E'Auditoria concluída com 2 NCs (1 menor + 1 maior) e 1 observação.\n\nPontos fortes:\n- Sistema de competências bem estruturado\n- Treinamentos com registro de eficácia\n\nPontos a melhorar:\n- Calibração de equipamentos com atrasos\n- Identificação de documentos não padronizada em algumas áreas',
     62,  -- Soma calculada abaixo
     115, -- Máximo possível (todas conformes)
