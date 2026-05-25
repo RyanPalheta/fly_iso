@@ -45,6 +45,25 @@ export interface RegistroCampoDef {
 
 export type RegistroDescarteAcao = 'arquivar' | 'descartar' | 'reter_indefinidamente'
 
+// ── Auditorias (ISO 9001 §9.2) ──
+export type AuditoriaTipo   = 'interna' | 'fornecedor' | '5s' | 'seguranca' | 'externa'
+export type AuditoriaStatus = 'planejada' | 'em_execucao' | 'concluida' | 'cancelada'
+
+export interface AuditoriaOpcaoResposta {
+  valor:  string         // ex: "conforme", "nc_menor"
+  label:  string         // ex: "Conforme"
+  pontos: number | null  // null = N/A (não conta)
+}
+
+export interface AuditoriaPergunta {
+  id:           string
+  texto:        string
+  clausula?:    string          // referência ISO ex: "7.5.2"
+  peso:         number          // multiplicador
+  obrigatoria:  boolean
+  opcoes:       AuditoriaOpcaoResposta[]
+}
+
 // ── Matriz de permissões (perfis.permissoes JSONB) ──
 export type Modulo =
   | 'documentos' | 'treinamentos' | 'nc' | 'capa' | 'indicadores'
