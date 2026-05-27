@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -15,7 +16,6 @@ import {
   LayoutDashboard,
   Settings,
   LogOut,
-  ShieldCheck,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -51,13 +51,20 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-border bg-card">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 border-b px-6">
-        <ShieldCheck className="h-6 w-6 text-primary" />
+      <Link href="/dashboard" className="flex h-16 items-center gap-2.5 border-b px-6 hover:bg-muted/30 transition-colors">
+        <Image
+          src="/fly-iso-mark.png"
+          alt="Fly ISO"
+          width={32}
+          height={32}
+          priority
+          className="h-7 w-auto"
+        />
         <div>
           <span className="text-lg font-bold tracking-tight">Fly ISO</span>
           <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground -mt-0.5">ISO 9001</p>
         </div>
-      </div>
+      </Link>
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">

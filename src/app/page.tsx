@@ -753,16 +753,14 @@ function Footer() {
       <div className="wrap">
         <div className="grid">
           <div>
-            <div className="logo">
-              <svg className="mark" viewBox="0 0 64 48" fill="none">
-                <path d="M8 10 V40 M8 10 H22 M8 24 H20" stroke="#fff" strokeWidth="6" strokeLinecap="square" />
-                <path d="M24 10 H56 L48 16 H32 Z" fill="#60A5FA" />
-                <path d="M30 22 H60 L52 28 H38 Z" fill="#60A5FA" opacity="0.85" />
-                <path d="M36 34 H52 L48 40 H40 Z" fill="#60A5FA" opacity="0.7" />
-              </svg>
-              <span className="logo-text" style={{ color: 'white' }}>
-                Fly<b style={{ color: '#60A5FA' }}>ISO</b>
-              </span>
+            <div className="logo logo-img">
+              <Image
+                src="/fly-iso-logo-white.png"
+                alt="Fly ISO"
+                width={120}
+                height={120}
+                style={{ width: 96, height: 'auto', objectFit: 'contain' }}
+              />
             </div>
             <p className="about">Plataforma de SGQ para PMEs industriais. ISO 9001:2015 sem planilha, sem caos.</p>
           </div>

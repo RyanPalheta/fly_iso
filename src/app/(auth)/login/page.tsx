@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ShieldCheck } from 'lucide-react'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -35,10 +35,14 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <ShieldCheck className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">Fly ISO</span>
-          </div>
+          <Image
+            src="/fly-iso-logo.png"
+            alt="Fly ISO"
+            width={180}
+            height={56}
+            priority
+            className="h-14 w-auto mb-2"
+          />
           <p className="text-sm text-muted-foreground">
             Plataforma de Gestão ISO 9001
           </p>

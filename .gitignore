@@ -51,5 +51,7 @@ next-env.d.ts
 
 # Originais de logo/assets na raiz (cópia oficial fica em public/)
 /ChatGPT Image*.png
+/logo branca.png
+/32x32.png
 /*.psd
 /*.ai
