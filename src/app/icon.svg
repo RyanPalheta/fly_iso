@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="0.4">
+      <stop offset="0%" stop-color="#0B2A8C"/>
+      <stop offset="55%" stop-color="#1E40AF"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+  </defs>
+  <!-- F mark composto por 3 paralelogramos inclinados (italic forward) -->
+  <!-- Barra superior (top da F) -->
+  <polygon points="12,10 58,10 50,22 14,22" fill="url(#g)"/>
+  <!-- Barra do meio -->
+  <polygon points="16,26 46,26 38,38 18,38" fill="url(#g)"/>
+  <!-- Hastes laterais conectadas — formam a 'perna' da F -->
+  <polygon points="16,42 36,42 28,54 8,54" fill="url(#g)"/>
+</svg>

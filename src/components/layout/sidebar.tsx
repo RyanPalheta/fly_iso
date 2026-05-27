@@ -51,19 +51,15 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-border bg-card">
       {/* Logo */}
-      <Link href="/dashboard" className="flex h-16 items-center gap-2.5 border-b px-6 hover:bg-muted/30 transition-colors">
+      <Link href="/dashboard" className="flex h-20 items-center justify-center border-b px-4 hover:bg-muted/30 transition-colors">
         <Image
-          src="/fly-iso-mark.png"
-          alt="Fly ISO"
-          width={32}
-          height={32}
+          src="/fly-iso-logo.png"
+          alt="Fly ISO — Plataforma de Gestão ISO 9001"
+          width={220}
+          height={80}
           priority
-          className="h-7 w-auto"
+          className="h-12 w-auto"
         />
-        <div>
-          <span className="text-lg font-bold tracking-tight">Fly ISO</span>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground -mt-0.5">ISO 9001</p>
-        </div>
       </Link>
 
       {/* Nav */}

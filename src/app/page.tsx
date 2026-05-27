@@ -52,10 +52,10 @@ function NavTop() {
           <Image
             src="/fly-iso-logo.png"
             alt="Fly ISO"
-            width={140}
-            height={44}
+            width={240}
+            height={80}
             priority
-            style={{ width: 'auto', height: 36, objectFit: 'contain' }}
+            style={{ width: 'auto', height: 56, objectFit: 'contain' }}
           />
         </a>
         <div className="links">

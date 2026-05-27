@@ -64,8 +64,9 @@ export function LandingStyles() {
   border-bottom: 1px solid var(--line);
 }
 .lp-root nav.top .inner {
-  max-width: 1200px; margin: 0 auto; padding: 14px 24px;
+  max-width: 1200px; margin: 0 auto; padding: 10px 24px;
   display: flex; align-items: center; justify-content: space-between;
+  min-height: 72px;
 }
 .lp-root nav.top .links { display: flex; gap: 32px; }
 .lp-root nav.top .links a { color: var(--mute-2); font-size: 14px; font-weight: 500; }
