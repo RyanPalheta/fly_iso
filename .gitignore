@@ -48,3 +48,8 @@ src/proxy.ts
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Originais de logo/assets na raiz (cópia oficial fica em public/)
+/ChatGPT Image*.png
+/*.psd
+/*.ai

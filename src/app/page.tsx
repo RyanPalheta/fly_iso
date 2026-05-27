@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { LandingStyles } from './_landing/landing-styles'
 
 // =============================================================================
@@ -47,14 +48,15 @@ function NavTop() {
   return (
     <nav className="top">
       <div className="inner">
-        <a href="#" className="logo">
-          <svg className="mark" viewBox="0 0 64 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 10 V40 M8 10 H22 M8 24 H20" stroke="#0F172A" strokeWidth="6" strokeLinecap="square" />
-            <path d="M24 10 H56 L48 16 H32 Z" fill="#1E40AF" />
-            <path d="M30 22 H60 L52 28 H38 Z" fill="#1E40AF" opacity="0.85" />
-            <path d="M36 34 H52 L48 40 H40 Z" fill="#1E40AF" opacity="0.7" />
-          </svg>
-          <span className="logo-text">Fly<b>ISO</b></span>
+        <a href="#" className="logo logo-img" aria-label="Fly ISO">
+          <Image
+            src="/fly-iso-logo.png"
+            alt="Fly ISO"
+            width={140}
+            height={44}
+            priority
+            style={{ width: 'auto', height: 36, objectFit: 'contain' }}
+          />
         </a>
         <div className="links">
           <a href="#modulos">Módulos</a>
