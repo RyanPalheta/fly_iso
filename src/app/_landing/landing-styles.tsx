@@ -642,6 +642,157 @@ export function LandingStyles() {
   .lp-root nav.top .links { display: none; }
   .lp-root section { padding: 64px 0; }
 }
+
+/* ── CLIENTS (infinite slider) ────────────────────────────────────────────── */
+.lp-root .clients {
+  background: white;
+  padding: 48px 0 56px;
+  border-bottom: 1px solid var(--line);
+}
+.lp-root .clients-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 32px; flex-wrap: wrap;
+  padding-bottom: 28px;
+}
+.lp-root .clients-head .eyebrow { color: var(--blue); flex-shrink: 0; }
+.lp-root .clients-head p {
+  margin: 0; max-width: 560px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.6;
+  color: var(--mute-2);
+}
+.lp-root .clients-slider {
+  position: relative; width: 100%; height: 88px; overflow: hidden;
+}
+.lp-root .clients-logo {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 180px; padding: 0 8px;
+  filter: grayscale(100%); opacity: 0.6;
+  transition: filter .25s ease, opacity .25s ease;
+}
+.lp-root .clients-logo:hover { filter: grayscale(0%); opacity: 1; }
+
+/* ── HERO SCROLL (container-scroll-animation) ─────────────────────────────── */
+.lp-root .hero-scroll { padding: 32px 0 8px; background: var(--bg); }
+.lp-root .hero-scroll .eyebrow { color: var(--blue); }
+.lp-root .hero-scroll-title {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.lp-root .hero-scroll-title .eyebrow { justify-content: center; }
+.lp-root .hero-scroll-h2 {
+  margin-top: 14px; max-width: none;
+  font-size: clamp(34px, 4.6vw, 52px);
+  text-align: center;
+}
+
+/* ── AUDITOR portrait overrides (real photo) ──────────────────────────────── */
+.lp-root .aud-portrait::before,
+.lp-root .aud-portrait .mono-bg { display: none; }
+.lp-root .aud-portrait img { display: block; }
+
+/* ── MODULES (radial orbital, dark variant) ───────────────────────────────── */
+.lp-root .mods-dark { background: var(--ink); padding: 96px 0 0; }
+.lp-root .eyebrow-dark { color: var(--yellow); }
+.lp-root .eyebrow-dark::before { background: var(--yellow); }
+.lp-root .sec-title-dark { color: white; }
+.lp-root .sec-sub-dark { color: rgba(255,255,255,0.65); font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.55; }
+.lp-root .mods-dark .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; flex-wrap: wrap; padding-bottom: 24px; }
+/* Force the orbital component to inherit dark section bg and a contained height */
+.lp-root .mods-dark > div + div,
+.lp-root .mods-dark .h-screen { height: 640px !important; background: transparent !important; }
+
+/* ── FLY DOES (typewriter) ────────────────────────────────────────────────── */
+.lp-root .fly-does {
+  background: var(--ink); color: white;
+  padding: 80px 0;
+  position: relative; overflow: hidden;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.lp-root .fly-does::before {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(600px 300px at 15% 30%, rgba(30,64,175,0.25), transparent 60%),
+    radial-gradient(600px 300px at 85% 70%, rgba(14,165,233,0.15), transparent 60%);
+  pointer-events: none;
+}
+.lp-root .fly-does .wrap { position: relative; }
+.lp-root .fly-does-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(28px, 3.8vw, 44px);
+  font-weight: 700; letter-spacing: -0.025em; line-height: 1.15;
+  color: white;
+  margin-top: 18px;
+  max-width: 920px;
+}
+.lp-root .fly-does-accent { color: var(--yellow); font-family: 'Manrope', sans-serif; font-weight: 700; }
+.lp-root .fly-does-cursor { margin-left: 4px; color: var(--yellow); font-weight: 400; }
+.lp-root .fly-does-sub {
+  margin-top: 26px; max-width: 640px;
+  color: rgba(255,255,255,0.65); font-size: 15.5px; line-height: 1.6;
+}
+
+/* ── DIFFERENTIALS 10 (features-10 redesign) ──────────────────────────────── */
+.lp-root .diff10-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 44px; }
+.lp-root .diff10-grid > div { background: white; border: 1px solid var(--line); border-radius: 0; box-shadow: none; position: relative; }
+.lp-root .diff10-grid > div > span[class*="border-primary"] {
+  border-color: var(--blue) !important;
+}
+.lp-root .diff10-header { padding: 0 !important; display: block !important; }
+.lp-root .diff10-heading { padding: 22px 24px 12px; }
+.lp-root .diff10-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--blue); font-weight: 500;
+}
+.lp-root .diff10-desc {
+  margin-top: 16px;
+  font-family: 'Manrope', sans-serif; font-weight: 700;
+  font-size: 19px; line-height: 1.25; letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.lp-root .diff10-body {
+  border-top: 1px dashed var(--line-2);
+  padding: 18px 24px 24px;
+  color: var(--mute-2);
+  font-size: 14px; line-height: 1.55;
+}
+.lp-root .diff10-compare { grid-column: 1 / -1; padding: 28px !important; }
+.lp-root .diff10-compare-title {
+  font-family: 'Manrope', sans-serif; font-weight: 700; letter-spacing: -0.015em;
+  font-size: 20px; line-height: 1.25; color: var(--ink);
+  max-width: 640px; margin: 0 auto 22px; text-align: center;
+}
+.lp-root .diff10-compare-table { overflow: hidden; border: 1px solid var(--line); }
+.lp-root .diff10-compare-table table { width: 100%; border-collapse: collapse; }
+.lp-root .diff10-compare-table thead tr { background: var(--paper-2); }
+.lp-root .diff10-compare-table th, .lp-root .diff10-compare-table td {
+  padding: 12px 14px; font-size: 13px; text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.lp-root .diff10-compare-table th {
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute-2);
+  font-weight: 500;
+}
+.lp-root .diff10-compare-table th.head-fly { color: var(--blue); background: rgba(30,64,175,0.06); text-align: center; }
+.lp-root .diff10-compare-table tbody tr:last-child td { border-bottom: none; }
+.lp-root .diff10-compare-table td.lbl { color: var(--ink); font-weight: 500; }
+.lp-root .diff10-compare-table td.cell-n,
+.lp-root .diff10-compare-table td.cell-y { text-align: center; width: 110px; }
+.lp-root .diff10-compare-table td.cell-y { background: rgba(30,64,175,0.04); }
+.lp-root .diff10-compare-table .cell-n span {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; color: var(--red); font-weight: 700;
+}
+.lp-root .diff10-compare-table .cell-y span {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; color: var(--green); font-weight: 700;
+}
+
+@media (max-width: 920px) {
+  .lp-root .diff10-grid { grid-template-columns: 1fr; }
+  .lp-root .mods-dark .head { flex-direction: column; align-items: flex-start; }
+}
     `}</style>
   )
 }

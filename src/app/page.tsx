@@ -3,6 +3,13 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { LandingStyles } from './_landing/landing-styles'
+import { ContainerScroll } from '@/components/ui/container-scroll-animation'
+import RadialOrbitalTimeline from '@/components/ui/radial-orbital-timeline'
+import { FileText, AlertTriangle, Wrench, BarChart3, GraduationCap, ClipboardCheck, ShieldAlert, FileSignature, Truck, RefreshCw, Blocks, RotateCcw, Unlock } from 'lucide-react'
+import { FeatureCard, CardHeader, CardHeading } from '@/components/ui/features-10'
+import { Typewriter } from '@/components/ui/typewriter'
+import { InfiniteSlider } from '@/components/ui/infinite-slider'
+import { ProgressiveBlur } from '@/components/ui/progressive-blur'
 
 // =============================================================================
 // Fly ISO — Landing Page v2
@@ -25,11 +32,14 @@ export default function LandingPage() {
       <div className="lp-root">
         <NavTop />
         <Hero />
+        <HeroScroll />
         <TrustBar />
+        <Clients />
         <Pain />
         <Results />
         <How />
         <Modules />
+        <FlyDoes />
         <Differentials />
         <Auditor />
         <Pricing />
@@ -164,6 +174,34 @@ function Hero() {
   )
 }
 
+// ── HERO SCROLL ─────────────────────────────────────────────────────────────
+function HeroScroll() {
+  return (
+    <section className="hero-scroll">
+      <ContainerScroll
+        titleComponent={
+          <div className="hero-scroll-title">
+            <span className="eyebrow">Veja em ação</span>
+            <h2 className="sec-title hero-scroll-h2">
+              A central de qualidade,<br />
+              <span style={{ color: 'var(--blue)' }}>na sua tela.</span>
+            </h2>
+          </div>
+        }
+      >
+        <Image
+          src="/screen.png"
+          alt="Dashboard Fly ISO"
+          width={1400}
+          height={720}
+          className="mx-auto rounded-2xl object-cover h-full w-full object-left-top"
+          draggable={false}
+        />
+      </ContainerScroll>
+    </section>
+  )
+}
+
 // ── TRUST BAR ───────────────────────────────────────────────────────────────
 function TrustBar() {
   return (
@@ -180,6 +218,45 @@ function TrustBar() {
         <span>Suporte por WhatsApp</span>
       </div>
     </div>
+  )
+}
+
+// ── CLIENTS ─────────────────────────────────────────────────────────────────
+function Clients() {
+  const logos = [
+    { id: 'petrobras', name: 'Petrobras',  src: '/clientes/Petrobras-Logo.png', h: 44 },
+    { id: 'servmar',   name: 'Servmar',    src: '/clientes/servmar.png',         h: 36 },
+    { id: 'democrata', name: 'Democrata',  src: '/clientes/logo-democrata.png',  h: 40 },
+    { id: 'fruta',     name: 'Fruta',      src: '/clientes/logo-fruta.jpg',      h: 44 },
+  ]
+
+  return (
+    <section className="clients">
+      <div className="wrap clients-head">
+        <span className="eyebrow">Quem confia</span>
+        <p>Da indústria de óleo & gás à manufatura calçadista — empresas brasileiras que escolheram parar de gerir qualidade no Excel.</p>
+      </div>
+
+      <div className="clients-slider">
+        <InfiniteSlider className="flex h-full w-full items-center" duration={32} gap={96}>
+          {logos.map((l) => (
+            <div key={l.id} className="clients-logo">
+              <Image src={l.src} alt={l.name} width={220} height={l.h} style={{ height: l.h, width: 'auto', objectFit: 'contain' }} />
+            </div>
+          ))}
+        </InfiniteSlider>
+        <ProgressiveBlur
+          className="pointer-events-none absolute top-0 left-0 h-full w-[200px]"
+          direction="left"
+          blurIntensity={1}
+        />
+        <ProgressiveBlur
+          className="pointer-events-none absolute top-0 right-0 h-full w-[200px]"
+          direction="right"
+          blurIntensity={1}
+        />
+      </div>
+    </section>
   )
 }
 
@@ -234,7 +311,7 @@ function Results() {
       <div className="wrap">
         <div className="head">
           <h2>O que muda em 90 dias.</h2>
-          <p>{'// média observada entre clientes em produção. medido contra a linha de base do primeiro mês.'}</p>
+          <p>{'// média observada entre clientes em produção. medido contra a linha de base do primeiro mês. amostra parcial — números atualizados a cada trimestre.'}</p>
         </div>
         <div className="stats-grid">
           <div className="stat">
@@ -298,49 +375,157 @@ function How() {
 
 // ── MODULES ─────────────────────────────────────────────────────────────────
 function Modules() {
-  const mods = [
-    { iso: '§7.5',   name: 'Documentos',                 desc: 'Controle de versão e distribuição.',     feats: ['Aprovação multi-nível', 'QR por posto', 'Histórico imutável'] },
-    { iso: '§8.7',   name: 'Não Conformidades',          desc: 'Tratativa com prazo e dono.',            feats: ['Abertura via app', 'SLA por severidade', 'Anexos: foto, PDF, áudio'] },
-    { iso: '§10.2',  name: 'CAPA',                       desc: 'Ação corretiva com eficácia.',           feats: ['5 Porquês / Ishikawa', 'Verificação 30/60/90', 'Reabre se reincidir'] },
-    { iso: '§9.1',   name: 'Indicadores',                desc: 'Monitoramento em tempo real.',           feats: ['KPI com meta e tolerância', 'Gráficos por processo', 'Alerta de desvio'] },
-    { iso: '§7.2',   name: 'Treinamentos',               desc: 'Competência e reciclagem.',              feats: ['Matriz por cargo', 'Retreinamento automático', 'Certificado digital'] },
-    { iso: '§9.2',   name: 'Auditorias',                 desc: 'Checklist da norma embutido.',           feats: ['Plano automatizado', 'Coleta offline no app', 'Relatório em 1 clique'] },
-    { iso: '§6.1',   name: 'Riscos & Oportunidades',     desc: 'Pensamento baseado em risco.',           feats: ['Matriz 5×5', 'Plano de tratamento', 'Revisão programada'] },
-    { iso: '§7.5.3', name: 'Registros',                  desc: 'Templates sem código.',                  feats: ['Construtor drag & drop', 'Assinatura eletrônica', 'Retenção por tipo'] },
+  const timelineData = [
+    {
+      id: 1,
+      title: 'Documentos',
+      date: '§7.5',
+      content: 'Controle de versão e distribuição. Aprovação multi-nível, QR por posto, histórico imutável.',
+      category: 'Documentos',
+      icon: FileText,
+      relatedIds: [2, 6],
+      status: 'completed' as const,
+      energy: 100,
+    },
+    {
+      id: 2,
+      title: 'Não Conformidades',
+      date: '§8.7',
+      content: 'Tratativa com prazo e dono. Abertura via app, SLA por severidade, anexos: foto, PDF, áudio.',
+      category: 'NC',
+      icon: AlertTriangle,
+      relatedIds: [1, 3],
+      status: 'completed' as const,
+      energy: 90,
+    },
+    {
+      id: 3,
+      title: 'CAPA',
+      date: '§10.2',
+      content: 'Ação corretiva com eficácia. 5 Porquês / Ishikawa, verificação 30/60/90, reabre se reincidir.',
+      category: 'CAPA',
+      icon: Wrench,
+      relatedIds: [2, 4],
+      status: 'in-progress' as const,
+      energy: 80,
+    },
+    {
+      id: 4,
+      title: 'Indicadores',
+      date: '§9.1',
+      content: 'Monitoramento em tempo real. KPI com meta e tolerância, gráficos por processo, alerta de desvio.',
+      category: 'KPI',
+      icon: BarChart3,
+      relatedIds: [3, 7],
+      status: 'in-progress' as const,
+      energy: 70,
+    },
+    {
+      id: 5,
+      title: 'Treinamentos',
+      date: '§7.2',
+      content: 'Competência e reciclagem. Matriz por cargo, retreinamento automático, certificado digital.',
+      category: 'RH',
+      icon: GraduationCap,
+      relatedIds: [1, 6],
+      status: 'in-progress' as const,
+      energy: 60,
+    },
+    {
+      id: 6,
+      title: 'Auditorias',
+      date: '§9.2',
+      content: 'Checklist da norma embutido. Plano automatizado, coleta offline no app, relatório em 1 clique.',
+      category: 'Auditoria',
+      icon: ClipboardCheck,
+      relatedIds: [1, 5, 8],
+      status: 'pending' as const,
+      energy: 50,
+    },
+    {
+      id: 7,
+      title: 'Riscos & Oportunidades',
+      date: '§6.1',
+      content: 'Pensamento baseado em risco. Matriz 5×5, plano de tratamento, revisão programada.',
+      category: 'Risco',
+      icon: ShieldAlert,
+      relatedIds: [4, 8],
+      status: 'pending' as const,
+      energy: 40,
+    },
+    {
+      id: 8,
+      title: 'Registros',
+      date: '§7.5.3',
+      content: 'Templates sem código. Construtor drag & drop, assinatura eletrônica, retenção por tipo.',
+      category: 'Registros',
+      icon: FileSignature,
+      relatedIds: [6, 9],
+      status: 'pending' as const,
+      energy: 30,
+    },
+    {
+      id: 9,
+      title: 'Fornecedores',
+      date: '§8.4',
+      content: 'Qualificação, avaliação e desempenho. Score por critério, requalificação programada, integração com NCs.',
+      category: 'Suprimentos',
+      icon: Truck,
+      relatedIds: [2, 8],
+      status: 'pending' as const,
+      energy: 25,
+    },
   ]
 
   return (
-    <section className="mods" id="modulos">
-      <div className="wrap">
+    <section id="modulos" className="mods-dark">
+      <div className="wrap" style={{ paddingTop: 0, paddingBottom: 0 }}>
         <div className="head">
           <div>
-            <span className="eyebrow">Módulos</span>
-            <h2 className="sec-title">Construído sobre a norma.</h2>
+            <span className="eyebrow eyebrow-dark">Módulos</span>
+            <h2 className="sec-title sec-title-dark">Construído sobre a norma.</h2>
           </div>
-          <p className="sec-sub" style={{ margin: 0, maxWidth: 320 }}>
-            Cada módulo aponta o requisito da ISO 9001:2015. Sem caixa-preta.
+          <p className="sec-sub sec-sub-dark" style={{ margin: 0, maxWidth: 360 }}>
+            Cada módulo aponta o requisito da ISO 9001:2015. Clique nos nós para explorar.
           </p>
         </div>
+      </div>
+      <RadialOrbitalTimeline timelineData={timelineData} />
+    </section>
+  )
+}
 
-        <div className="mods-grid">
-          {mods.map((m) => (
-            <div className="mod" key={m.iso}>
-              <div className="iso">{m.iso}</div>
-              <div className="arrow">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h4>{m.name}</h4>
-              <p className="desc">{m.desc}</p>
-              <div className="feats">
-                <ul>
-                  {m.feats.map((f) => <li key={f}>{f}</li>)}
-                </ul>
-              </div>
-            </div>
-          ))}
-        </div>
+// ── FLY DOES (TYPEWRITER) ───────────────────────────────────────────────────
+function FlyDoes() {
+  return (
+    <section className="fly-does">
+      <div className="wrap">
+        <span className="eyebrow eyebrow-dark">Enquanto você dorme</span>
+        <h2 className="fly-does-title">
+          <span>A Fly ISO </span>
+          <Typewriter
+            text={[
+              'arquiva a versão antiga do documento.',
+              'abre a NC e notifica o responsável.',
+              'agenda o retreinamento do operador.',
+              'calcula o indicador em tempo real.',
+              'reabre a CAPA que reincidiu em 60 dias.',
+              'monta o relatório de auditoria por requisito.',
+              'envia o lembrete da revisão programada.',
+              'gera o certificado digital de competência.',
+            ]}
+            speed={45}
+            waitTime={1800}
+            deleteSpeed={25}
+            className="fly-does-accent"
+            cursorChar="▌"
+            cursorClassName="fly-does-cursor"
+          />
+        </h2>
+        <p className="fly-does-sub">
+          A plataforma executa em segundo plano o que sua equipe levaria semanas para fazer no Excel.
+          Você cuida do negócio. A norma cuida-se sozinha.
+        </p>
       </div>
     </section>
   )
@@ -365,46 +550,56 @@ function Differentials() {
     'Trilha de auditoria',
   ]
 
+  const icons = [RefreshCw, Blocks, RotateCcw, Unlock]
+  const diffsWithIcons = diffs.map((d, i) => ({ ...d, icon: icons[i] }))
+
   return (
     <section className="diff">
       <div className="wrap">
         <span className="eyebrow">Diferenciais</span>
         <h2 className="sec-title">O que outros não fazem — e a gente faz.</h2>
-        <div className="diff-grid">
-          <div className="diff-list">
-            {diffs.map((d) => (
-              <div className="diff-item" key={d.n}>
-                <div className="num">{d.n}</div>
-                <div>
-                  <h4>{d.titulo}</h4>
-                  <p>{d.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          <div className="compare">
-            <h3>Planilha &amp; e-mail × Fly ISO</h3>
-            <p className="sub">A comparação honesta.</p>
-            <table className="ctable">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Planilha + email</th>
-                  <th className="head-fly">Fly ISO</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r}>
-                    <td className="lbl">{r}</td>
-                    <td><span className="n">✗</span></td>
-                    <td className="col-fly"><span className="y">✓</span></td>
+        <div className="diff10-grid">
+          {diffsWithIcons.map((d) => (
+            <FeatureCard key={d.n}>
+              <CardHeader className="diff10-header">
+                <CardHeading
+                  icon={d.icon}
+                  title={`Diferencial · ${d.n}`}
+                  description={d.titulo}
+                />
+              </CardHeader>
+              <div className="diff10-body">
+                <p>{d.desc}</p>
+              </div>
+            </FeatureCard>
+          ))}
+
+          <FeatureCard className="diff10-compare">
+            <h3 className="diff10-compare-title">
+              Planilha &amp; e-mail × Fly ISO — a comparação honesta.
+            </h3>
+            <div className="diff10-compare-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Planilha + email</th>
+                    <th className="head-fly">Fly ISO</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r}>
+                      <td className="lbl">{r}</td>
+                      <td className="cell-n"><span>✗</span></td>
+                      <td className="cell-y"><span>✓</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </FeatureCard>
         </div>
       </div>
     </section>
@@ -426,13 +621,14 @@ function Auditor() {
         <div className="aud-grid">
           <div>
             <div className="aud-portrait">
-              <span className="ph-tag">FOTO · placeholder</span>
-              <div className="mono-bg"></div>
-              <div className="initials">RP</div>
-              <div className="ph-foot">
-                <span>retrato · 3:4</span>
-                <span className="yellow">substituir</span>
-              </div>
+              <Image
+                src="/rafael-palheta.jpg"
+                alt="Rafael F. Palheta — Lead Auditor IRCA"
+                fill
+                sizes="(max-width: 768px) 320px, 360px"
+                style={{ objectFit: 'cover', objectPosition: 'center top' }}
+                priority={false}
+              />
             </div>
             <div className="aud-name">Rafael F. Palheta</div>
             <div className="aud-role">
@@ -730,7 +926,7 @@ function FinalCta() {
         <h2>Seu próximo auditor vai <em>gostar</em><br />do que vai ver.</h2>
         <p>30 minutos. Sem cartão, sem compromisso. A gente abre o produto e mostra o seu caso.</p>
         <div className="ctas">
-          <a href="https://wa.me/5511999999999" className="btn btn-wa btn-lg">
+          <a href="https://wa.me/559285460332" className="btn btn-wa btn-lg">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.5 14.4c-.3-.1-1.7-.9-2-1s-.5-.1-.7.1c-.2.3-.8 1-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.6 1.4 5.1L2 22l5-1.3c1.5.8 3.2 1.3 5 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.3c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.2.8.9-3.1-.2-.3C3.9 15 3.5 13.5 3.5 12 3.5 7.3 7.3 3.5 12 3.5s8.5 3.8 8.5 8.5-3.8 8.3-8.5 8.3z" />
             </svg>
@@ -780,13 +976,12 @@ function Footer() {
           </div>
           <div className="col">
             <h5>Contato</h5>
-            <a href="https://wa.me/5511999999999">WhatsApp</a>
+            <a href="https://wa.me/559285460332">WhatsApp</a>
             <a href="mailto:contato@flyiso.com.br">contato@flyiso.com.br</a>
-            <a href="#">São Paulo, Brasil</a>
           </div>
         </div>
         <div className="bottom">
-          <span>© 2026 Fly ISO · CNPJ 00.000.000/0001-00</span>
+          <span>© 2026 Fly ISO</span>
           <span>app.flyiso.com.br</span>
         </div>
       </div>
@@ -797,7 +992,7 @@ function Footer() {
 // ── WhatsApp float ──────────────────────────────────────────────────────────
 function WhatsAppFloat() {
   return (
-    <a href="https://wa.me/5511999999999" className="wa-float" aria-label="WhatsApp">
+    <a href="https://wa.me/559285460332" className="wa-float" aria-label="WhatsApp">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
         <path d="M17.5 14.4c-.3-.1-1.7-.9-2-1s-.5-.1-.7.1c-.2.3-.8 1-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.6 1.4 5.1L2 22l5-1.3c1.5.8 3.2 1.3 5 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.3c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.2.8.9-3.1-.2-.3C3.9 15 3.5 13.5 3.5 12 3.5 7.3 7.3 3.5 12 3.5s8.5 3.8 8.5 8.5-3.8 8.3-8.5 8.3z" />
       </svg>
